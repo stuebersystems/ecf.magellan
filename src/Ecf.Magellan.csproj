@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <Copyright>© 2020 STÜBER SYSTEMS GmbH</Copyright>
+    <Product>ECF Tool for MAGELLAN</Product>
+    <Company>STÜBER SYSTEMS GmbH</Company>
+    <Version>0.0.1</Version>
+    <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    <Description>Tool for synchronizing ECF files with MAGELLAN</Description>
+    <Authors>STÜBER SYSTEMS GmbH</Authors>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Enbrea.Csv" Version="0.0.2-develop.34" />
+    <PackageReference Include="Enbrea.Ecf" Version="0.0.2-develop.22" />
+    <PackageReference Include="FirebirdSql.Data.FirebirdClient" Version="7.10.1" />
+    <PackageReference Include="System.Text.Encoding.CodePages" Version="5.0.0" />
+    <PackageReference Include="System.CommandLine" Version="2.0.0-beta1.20574.7" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Templates\Template.export.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="Templates\Template.import.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="..\LICENSE">
+      <Pack>True</Pack>
+      <PackagePath></PackagePath>
+    </None>
+  </ItemGroup>
+
+</Project>
