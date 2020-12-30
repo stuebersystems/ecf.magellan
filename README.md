@@ -1,10 +1,12 @@
-# ECF Tool for MAGELLAN
-
 ![GitHub](https://img.shields.io/github/license/stuebersystems/ecf.magellan?style=flat-square)
 
-## Einführung
+# ECF Tool for MAGELLAN
 
-Das ECF Tool for Excel ist eine .NET-Kommandozeilenanwendung zum Exportieren von ECF-Dateien aus MAGELLAN bzw. zum Importieren von ECF-Dateien nach MAGELLAN.
+Eine .NET Core Kommandozeilenanwendung zum Exportieren von ECF-Dateien aus MAGELLAN bzw. zum Importieren von ECF-Dateien nach MAGELLAN.
+
+## Installation
+
+Die Installation erfolgt automatisch im Kontext des PowerShell-Moduls [PSEnbrea](https://github.com/stuebersystems/psenbrea).
 
 ## Systemvoraussetzungen
 
@@ -12,7 +14,7 @@ Das ECF Tool for MAGELLAN benötigt die [.NET Core 3.1 Laufzeitumgebung](https:/
 
 ## Dokumentation
 
-tbd
+Die Dokumentation findest Du im [GitHub-Wiki](https://github.com/stuebersystems/ecf.magellan/wiki).
 
 ## Kann ich mithelfen?
 
