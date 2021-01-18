@@ -1,8 +1,8 @@
-﻿#region ENBREA - Copyright (C) 2020 STÜBER SYSTEMS GmbH
+﻿#region ENBREA - Copyright (C) 2021 STÜBER SYSTEMS GmbH
 /*    
  *    ENBREA 
  *    
- *    Copyright (C) 2020 STÜBER SYSTEMS GmbH
+ *    Copyright (C) 2021 STÜBER SYSTEMS GmbH
  *
  *    This program is free software: you can redistribute it and/or modify
  *    it under the terms of the GNU Affero General Public License, version 3,
@@ -20,6 +20,7 @@
 #endregion
 
 using System;
+using System.IO;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -32,26 +33,25 @@ namespace Ecf.Magellan
 
         public static async Task<Configuration> LoadFromFile(string fileName, CancellationToken cancellationToken = default)
         {
-            var jsonDoc = await JsonDocumentUtils.ParseFileAsync(fileName, cancellationToken);
-
-            if (jsonDoc.RootElement.TryGetProperty(EmbeddedNodeName, out var jsonElement))
+            if (File.Exists(fileName))
             {
-                return JsonSerializer.Deserialize<Configuration>(jsonElement.GetRawText());
+                using var fileStream = new FileStream(fileName, FileMode.Open, FileAccess.Read, FileShare.Read);
+
+                var jsonDoc = await JsonDocument.ParseAsync(fileStream, default, cancellationToken);
+
+                if (jsonDoc.RootElement.TryGetProperty(EmbeddedNodeName, out var jsonElement))
+                {
+                    return JsonSerializer.Deserialize<Configuration>(jsonElement.GetRawText());
+                }
+                else
+                {
+                    throw new InvalidOperationException($"No configuration for \"{EmbeddedNodeName}\" found in file \"{fileName}\").");
+                }
             }
             else
             {
-                throw new InvalidOperationException($"No configuration for \"{EmbeddedNodeName}\" found in file \"{fileName}\").");
+                throw new FileNotFoundException($"File \"{fileName}\") does not exists.");
             }
-        }
-
-        public static async Task InitConfig(string fileName, string templateFileName, CancellationToken cancellationToken = default)
-        {
-            // Merge JSON configuration template with existing JSON configuration
-            await JsonDocumentUtils.MergeFilesAsync(fileName, templateFileName, cancellationToken);
-
-            // Report status
-            Console.WriteLine();
-            Console.WriteLine($"[Config] Configuration template created in file \"{fileName}\"");
         }
     }
 }

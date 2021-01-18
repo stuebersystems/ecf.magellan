@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>netcoreapp3.1</TargetFramework>
-    <Copyright>© 2020 STÜBER SYSTEMS GmbH</Copyright>
+    <Copyright>© 2021 STÜBER SYSTEMS GmbH</Copyright>
     <Product>ECF Tool for MAGELLAN</Product>
     <Company>STÜBER SYSTEMS GmbH</Company>
     <Version>0.0.1</Version>
@@ -26,12 +26,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="Templates\Template.export.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Update="Templates\Template.import.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
     <None Include="..\LICENSE">
       <Pack>True</Pack>
       <PackagePath></PackagePath>

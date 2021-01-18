@@ -1,8 +1,8 @@
-﻿#region ENBREA - Copyright (C) 2020 STÜBER SYSTEMS GmbH
+﻿#region ENBREA - Copyright (C) 2021 STÜBER SYSTEMS GmbH
 /*    
  *    ENBREA
  *    
- *    Copyright (C) 2020 STÜBER SYSTEMS GmbH
+ *    Copyright (C) 2021 STÜBER SYSTEMS GmbH
  *
  *    This program is free software: you can redistribute it and/or modify
  *    it under the terms of the GNU Affero General Public License, version 3,
@@ -19,6 +19,8 @@
  */
 #endregion
 
+using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -41,5 +43,34 @@ namespace Ecf.Magellan
         }
 
         public abstract Task Execute();
+
+        protected void PrepareExportFolder()
+        {
+            if (Directory.Exists(_config.EcfExport.TargetFolderName))
+            {
+                foreach (var fileName in Directory.EnumerateFiles(_config.EcfExport.TargetFolderName, "*.csv"))
+                {
+                    File.Delete(fileName);
+                }
+            }
+            else
+            {
+                Directory.CreateDirectory(_config.EcfExport?.TargetFolderName);
+            }
+        }
+
+        protected bool ShouldExportTable(string ecfTableName, out EcfExportFile ecfFile)
+        {
+            if (_config.EcfExport.Files.Count > 0)
+            {
+                ecfFile = _config.EcfExport.Files.FirstOrDefault(x => x.Name.ToLower() == ecfTableName.ToLower());
+                return ecfFile != null;
+            }
+            else
+            {
+                ecfFile = null;
+                return true;
+            }
+        }
     }
 }

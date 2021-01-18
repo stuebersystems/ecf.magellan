@@ -1,8 +1,8 @@
-﻿#region ENBREA - Copyright (C) 2020 STÜBER SYSTEMS GmbH
+﻿#region ENBREA - Copyright (C) 2021 STÜBER SYSTEMS GmbH
 /*    
  *    ENBREA
  *    
- *    Copyright (C) 2020 STÜBER SYSTEMS GmbH
+ *    Copyright (C) 2021 STÜBER SYSTEMS GmbH
  *
  *    This program is free software: you can redistribute it and/or modify
  *    it under the terms of the GNU Affero General Public License, version 3,
@@ -34,7 +34,6 @@ namespace Ecf.Magellan
             Console.Title = AssemblyInfo.GetTitle();
 
             // Display infos about this app
-            Console.WriteLine();
             Console.WriteLine(AssemblyInfo.GetTitle());
             Console.WriteLine(AssemblyInfo.GetCopyright());
 
@@ -45,9 +44,7 @@ namespace Ecf.Magellan
             var rootCommand = new RootCommand(description: "Tool for synchronizing ECF files with MAGELLAN")
             {
                 CommandDefinitions.Export(),
-                CommandDefinitions.InitExport(),
-                CommandDefinitions.Import(),
-                CommandDefinitions.InitImport(),
+                CommandDefinitions.Import()
             };
 
             // Parse the incoming args and invoke the handler

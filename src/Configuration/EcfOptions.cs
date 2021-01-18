@@ -1,8 +1,8 @@
-﻿#region ENBREA - Copyright (C) 2020 STÜBER SYSTEMS GmbH
+﻿#region ENBREA - Copyright (C) 2021 STÜBER SYSTEMS GmbH
 /*    
  *    ENBREA
  *    
- *    Copyright (C) 2020 STÜBER SYSTEMS GmbH
+ *    Copyright (C) 2021 STÜBER SYSTEMS GmbH
  *
  *    This program is free software: you can redistribute it and/or modify
  *    it under the terms of the GNU Affero General Public License, version 3,
@@ -24,7 +24,6 @@ namespace Ecf.Magellan
     public class EcfOptions
     {
         public string DatabaseConnection { get; set; }
-        public string FolderName { get; set; }
         public int SchoolTermId { get; set; }
         public string Separator { get; set; }
         public int TenantId { get; set; }

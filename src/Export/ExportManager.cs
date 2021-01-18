@@ -1,8 +1,8 @@
-﻿#region ENBREA - Copyright (C) 2020 STÜBER SYSTEMS GmbH
+﻿#region ENBREA - Copyright (C) 2021 STÜBER SYSTEMS GmbH
 /*    
  *    ENBREA
  *    
- *    Copyright (C) 2020 STÜBER SYSTEMS GmbH
+ *    Copyright (C) 2021 STÜBER SYSTEMS GmbH
  *
  *    This program is free software: you can redistribute it and/or modify
  *    it under the terms of the GNU Affero General Public License, version 3,
@@ -105,28 +105,27 @@ namespace Ecf.Magellan
                     connection.Close();
                 }
             }
-            catch (Exception ex)
+            catch
             {
                 // Report status 
                 Console.WriteLine();
                 Console.WriteLine($"[Error] Extracting failed. Only {_tableCounter} table(s) and {_recordCounter} record(s) extracted");
-                Console.WriteLine($"[Error] Reason: {ex.Message}");
+                throw;
             }
         }
 
-        private async Task Execute(string csvTableName, FbConnection fbConnection, Func<FbConnection, EcfTableWriter, string[], Task<int>> action)
+        private async Task Execute(string ecfTableName, FbConnection fbConnection, Func<FbConnection, EcfTableWriter, string[], Task<int>> action)
         {
-            EcfExportFile ecfFile = _config.EcfExport.Files.FirstOrDefault(x => x.Name.ToLower() == csvTableName.ToLower());
-            if (ecfFile != null)
+            if (ShouldExportTable(ecfTableName, out var ecfFile))
             {
                 // Report status
-                Console.WriteLine($"[Extracting] [{csvTableName}] Start...");
+                Console.WriteLine($"[Extracting] [{ecfTableName}] Start...");
 
                 // Init CSV file stream
-                using var csvfileStream = new FileStream(Path.ChangeExtension(Path.Combine(_config.EcfExport?.FolderName, csvTableName), "csv"), FileMode.Create, FileAccess.ReadWrite, FileShare.None);
+                using var ecffileStream = new FileStream(Path.ChangeExtension(Path.Combine(_config.EcfExport?.TargetFolderName, ecfTableName), "csv"), FileMode.Create, FileAccess.ReadWrite, FileShare.None);
 
                 // Init CSV Writer
-                using var csvWriter = new CsvWriter(csvfileStream, Encoding.UTF8);
+                using var csvWriter = new CsvWriter(ecffileStream, Encoding.UTF8);
 
                 // Init ECF Writer
                 var ecfTablefWriter = new EcfTableWriter(csvWriter);
@@ -137,14 +136,14 @@ namespace Ecf.Magellan
                 }
 
                 // Call table specific action
-                var csvRecordCounter = await action(fbConnection, ecfTablefWriter, ecfFile.Headers);
+                var ecfRecordCounter = await action(fbConnection, ecfTablefWriter, ecfFile?.Headers);
 
                 // Inc counters
-                _recordCounter += csvRecordCounter;
+                _recordCounter += ecfRecordCounter;
                 _tableCounter++;
 
                 // Report status
-                Console.WriteLine($"[Extracting] [{csvTableName}] {csvRecordCounter} record(s) extracted");
+                Console.WriteLine($"[Extracting] [{ecfTableName}] {ecfRecordCounter} record(s) extracted");
             }
         }
 
@@ -157,7 +156,7 @@ namespace Ecf.Magellan
 
             using var reader = await fbCommand.ExecuteReaderAsync();
 
-            var csvRecordCounter = 0;
+            var ecfRecordCounter = 0;
 
             if (ecfHeaders != null && ecfHeaders.Length > 0)
             {
@@ -183,10 +182,10 @@ namespace Ecf.Magellan
 
                 await ecfTableWriter.WriteAsync();
 
-                csvRecordCounter++;
+                ecfRecordCounter++;
             }
 
-            return csvRecordCounter;
+            return ecfRecordCounter;
         }
 
         private async Task<int> ExportDepartments(FbConnection fbConnection, EcfTableWriter ecfTableWriter, string[] ecfHeaders)
@@ -200,7 +199,7 @@ namespace Ecf.Magellan
 
             using var reader = await fbCommand.ExecuteReaderAsync();
 
-            var csvRecordCounter = 0;
+            var ecfRecordCounter = 0;
 
             if (ecfHeaders != null && ecfHeaders.Length > 0)
             {
@@ -222,10 +221,10 @@ namespace Ecf.Magellan
 
                 await ecfTableWriter.WriteAsync();
 
-                csvRecordCounter++;
+                ecfRecordCounter++;
             }
 
-            return csvRecordCounter;
+            return ecfRecordCounter;
         }
 
         private async Task<int> ExportEducationalPrograms(FbConnection fbConnection, EcfTableWriter ecfTableWriter, string[] ecfHeaders)
@@ -237,7 +236,7 @@ namespace Ecf.Magellan
 
             using var reader = await fbCommand.ExecuteReaderAsync();
 
-            var csvRecordCounter = 0;
+            var ecfRecordCounter = 0;
 
             if (ecfHeaders != null && ecfHeaders.Length > 0)
             {
@@ -263,10 +262,10 @@ namespace Ecf.Magellan
 
                 await ecfTableWriter.WriteAsync();
 
-                csvRecordCounter++;
+                ecfRecordCounter++;
             }
 
-            return csvRecordCounter;
+            return ecfRecordCounter;
         }
 
         private async Task<int> ExportSchoolClasses(FbConnection fbConnection, EcfTableWriter ecfTableWriter, string[] ecfHeaders)
@@ -287,7 +286,7 @@ namespace Ecf.Magellan
 
             using var reader = await fbCommand.ExecuteReaderAsync();
 
-            var csvRecordCounter = 0;
+            var ecfRecordCounter = 0;
 
             if (ecfHeaders != null && ecfHeaders.Length > 0)
             {
@@ -331,10 +330,10 @@ namespace Ecf.Magellan
 
                 await ecfTableWriter.WriteAsync();
 
-                csvRecordCounter++;
+                ecfRecordCounter++;
             }
 
-            return csvRecordCounter;
+            return ecfRecordCounter;
         }
 
         private async Task<int> ExportSchoolClassTypes(EcfTableWriter ecfTableWriter)
@@ -388,7 +387,7 @@ namespace Ecf.Magellan
             using var reader = await fbCommand.ExecuteReaderAsync();
 
             var ecfCache = new HashSet<int>();
-            var csvRecordCounter = 0;
+            var ecfRecordCounter = 0;
 
             if (ecfHeaders != null && ecfHeaders.Length > 0)
             {
@@ -425,11 +424,11 @@ namespace Ecf.Magellan
                     await ecfTableWriter.WriteAsync();
 
                     ecfCache.Add(studentId);
-                    csvRecordCounter++;
+                    ecfRecordCounter++;
                 }
             }
                 
-            return csvRecordCounter;
+            return ecfRecordCounter;
         }
 
         private async Task<int> ExportStudentSchoolClassAttendances(FbConnection fbConnection, EcfTableWriter ecfTableWriter, string[] ecfHeaders)
@@ -472,7 +471,7 @@ namespace Ecf.Magellan
 
             using var reader = await fbCommand.ExecuteReaderAsync();
 
-            var csvRecordCounter = 0;
+            var ecfRecordCounter = 0;
 
             if (ecfHeaders != null && ecfHeaders.Length > 0)
             {
@@ -498,10 +497,10 @@ namespace Ecf.Magellan
 
                 await ecfTableWriter.WriteAsync();
 
-                csvRecordCounter++;
+                ecfRecordCounter++;
             }
 
-            return csvRecordCounter;
+            return ecfRecordCounter;
         }
 
         private async Task<int> ExportStudentSubjects(FbConnection fbConnection, EcfTableWriter ecfTableWriter, string[] ecfHeaders)
@@ -559,7 +558,7 @@ namespace Ecf.Magellan
 
             using var reader = await fbCommand.ExecuteReaderAsync();
 
-            var csvRecordCounter = 0;
+            var ecfRecordCounter = 0;
 
             
 
@@ -601,10 +600,10 @@ namespace Ecf.Magellan
 
                 await ecfTableWriter.WriteAsync();
 
-                csvRecordCounter++;
+                ecfRecordCounter++;
             }
 
-            return csvRecordCounter;
+            return ecfRecordCounter;
         }
 
         private async Task<int> ExportSubjectCategories(EcfTableWriter ecfTableWriter)
@@ -636,7 +635,7 @@ namespace Ecf.Magellan
 
             using var reader = await fbCommand.ExecuteReaderAsync();
 
-            var csvRecordCounter = 0;
+            var ecfRecordCounter = 0;
 
             if (ecfHeaders != null && ecfHeaders.Length > 0)
             {
@@ -668,10 +667,10 @@ namespace Ecf.Magellan
 
                 await ecfTableWriter.WriteAsync();
 
-                csvRecordCounter++;
+                ecfRecordCounter++;
             }
 
-            return csvRecordCounter;
+            return ecfRecordCounter;
         }
 
         private async Task<int> ExportSubjectTypes(EcfTableWriter ecfTableWriter)
@@ -728,7 +727,7 @@ namespace Ecf.Magellan
 
             using var reader = await fbCommand.ExecuteReaderAsync();
 
-            var csvRecordCounter = 0;
+            var ecfRecordCounter = 0;
 
             if (ecfHeaders != null && ecfHeaders.Length > 0)
             {
@@ -762,10 +761,10 @@ namespace Ecf.Magellan
 
                 await ecfTableWriter.WriteAsync();
 
-                csvRecordCounter++;
+                ecfRecordCounter++;
             }
 
-            return csvRecordCounter;
+            return ecfRecordCounter;
         }
 
         private async Task<bool> IsMagellanVersion7(FbConnection fbConnection)
@@ -778,21 +777,6 @@ namespace Ecf.Magellan
             using var reader = await fbCommand.ExecuteReaderAsync();
 
             return reader.HasColumn("SchuelerZeitraumID");
-        }
-
-        private void PrepareExportFolder()
-        {
-            if (Directory.Exists(_config.EcfExport.FolderName))
-            {
-                foreach (var fileName in Directory.EnumerateFiles(_config.EcfExport.FolderName, "*.csv"))
-                {
-                    File.Delete(fileName);
-                }
-            }
-            else
-            {
-                Directory.CreateDirectory(_config.EcfExport?.FolderName);
-            }
         }
     }
 }

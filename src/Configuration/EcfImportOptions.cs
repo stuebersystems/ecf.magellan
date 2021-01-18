@@ -1,8 +1,8 @@
-﻿#region ENBREA - Copyright (C) 2020 STÜBER SYSTEMS GmbH
+﻿#region ENBREA - Copyright (C) 2021 STÜBER SYSTEMS GmbH
 /*    
  *    ENBREA
  *    
- *    Copyright (C) 2020 STÜBER SYSTEMS GmbH
+ *    Copyright (C) 2021 STÜBER SYSTEMS GmbH
  *
  *    This program is free software: you can redistribute it and/or modify
  *    it under the terms of the GNU Affero General Public License, version 3,
@@ -26,7 +26,7 @@ namespace Ecf.Magellan
     public class EcfImportOptions : EcfOptions
     {
         public ICollection<EcfImportFile> Files { get; set; } = new List<EcfImportFile>();
-
         public string Seed { get; set; }
+        public string SourceFolderName { get; set; }
     }
 }
