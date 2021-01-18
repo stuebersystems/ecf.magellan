@@ -1,8 +1,8 @@
-﻿#region ENBREA - Copyright (C) 2020 STÜBER SYSTEMS GmbH
+﻿#region ENBREA - Copyright (C) 2021 STÜBER SYSTEMS GmbH
 /*    
  *    ENBREA
  *    
- *    Copyright (C) 2020 STÜBER SYSTEMS GmbH
+ *    Copyright (C) 2021 STÜBER SYSTEMS GmbH
  *
  *    This program is free software: you can redistribute it and/or modify
  *    it under the terms of the GNU Affero General Public License, version 3,
@@ -57,40 +57,6 @@ namespace Ecf.Magellan
             command.Handler = CommandHandler.Create<FileInfo>(
                 async (config) =>
                     await CommandHandlers.Import(config));
-
-            return command;
-        }
-
-        public static Command InitExport()
-        {
-            var command = new Command("init-export", "Creates a new JSON configuration file or applies changes to an existing one")
-            {
-                new Option(new[] { "--config", "-c" }, "Path to new or existing JSON file")
-                {
-                    Argument = new Argument<FileInfo>(),
-                    IsRequired = true
-                }
-            };
-            command.Handler = CommandHandler.Create<FileInfo>(
-                async (config) =>
-                    await CommandHandlers.InitExport(config));
-
-            return command;
-        }
-
-        public static Command InitImport()
-        {
-            var command = new Command("init-import", "Creates a new JSON configuration file or applies changes to an existing one")
-            {
-                new Option(new[] { "--config", "-c" }, "Path to new or existing JSON file")
-                {
-                    Argument = new Argument<FileInfo>(),
-                    IsRequired = true
-                }
-            };
-            command.Handler = CommandHandler.Create<FileInfo>(
-                async (config) =>
-                    await CommandHandlers.InitImport(config));
 
             return command;
         }
