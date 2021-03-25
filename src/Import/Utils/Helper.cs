@@ -17,23 +17,27 @@ namespace Ecf.Magellan
             {                
                 foreach (var career in student.Career)
                 {
-                    dbResult = await RecordExists.Subject(fbConnection, tenantId, career.EcfIds.SubjectId);
-                    if (dbResult.Success)
+
+                    foreach (var studentSubject in career.StudentSubjects)
                     {
-                        career.MagellanIds.FachId = (int)dbResult.Value;
-
-                        dbResult = await RecordExists.ByGuidExtern(fbConnection, MagellanTables.Teachers, tenantId, career.EcfIds.TeacherId);
+                        dbResult = await RecordExists.Subject(fbConnection, tenantId, studentSubject.EcfValues.SubjectId);
                         if (dbResult.Success)
                         {
-                            career.MagellanIds.LehrerId = (int)dbResult.Value;
-                        }
+                            studentSubject.MagellanValues.SubjectId = (int)dbResult.Value;
 
-                        dbResult = await RecordExists.ByCodeAndTenant(fbConnection, MagellanTables.GradeValues, tenantId, career.EcfIds.Grade1ValueId);
-                        if (dbResult.Success)
-                        {
-                            career.MagellanIds.Endnote1Id = (int)dbResult.Value;
+                            dbResult = await RecordExists.ByGuidExtern(fbConnection, MagellanTables.Teachers, tenantId, studentSubject.EcfValues.TeacherId);
+                            if (dbResult.Success)
+                            {
+                                studentSubject.MagellanValues.TeacherId = (int)dbResult.Value;
+                            }
+
+                            dbResult = await RecordExists.ByCodeAndTenant(fbConnection, MagellanTables.GradeValues, tenantId, studentSubject.EcfValues.Grade1ValueId);
+                            if (dbResult.Success)
+                            {
+                                studentSubject.MagellanValues.Grade1ValueId = (int)dbResult.Value;
+                            }
                         }
-                    }
+                    }                    
                 }
             }               
         }
@@ -44,36 +48,44 @@ namespace Ecf.Magellan
             {
                 var studentId = ecfTableReader.GetValue<string>("StudentId");                
                 var student = students.Find(s => s.EcfId.Equals(studentId));
-
-                if (student == null)
-                {
-                    student = new Students(studentId);
-                    students.Add(student);
-                }
-
                 var schoolTermId = ecfTableReader.GetValue<string>("SchoolTermId");
-                var schoolClassId = ecfTableReader.GetValue<string>("SchoolClassId");                
+                var schoolClassId = ecfTableReader.GetValue<string>("SchoolClassId");
 
-                var career = student.Career.Find(c => c.EcfIds.SchoolTermId.Equals(schoolTermId) && c.EcfIds.SchoolClassId.Equals(schoolClassId));
-
-                if (career == null)
+                if (!String.IsNullOrEmpty(studentId) && !String.IsNullOrEmpty(schoolTermId) && !String.IsNullOrEmpty(schoolClassId))
                 {
-                    student.Career.Add(new Career(
-                        ecfTableReader.GetValue<string>("Id"),
-                        ecfTableReader.GetValue<string>("SchoolTermId"),
-                        ecfTableReader.GetValue<string>("SchoolClassId"),
-                        ecfTableReader.GetValue<string>("StudentId"),
+                    if (student == null)
+                    {
+                        student = new Students(studentId);
+                        students.Add(student);
+                    }
+
+                    var career = student.Career.Find(c => c.EcfValues.SchoolTermId.Equals(schoolTermId) && c.EcfValues.SchoolClassId.Equals(schoolClassId));
+
+                    if (career == null)
+                    {
+                        career = new Career(
+                            ecfTableReader.GetValue<string>("Id"),
+                            ecfTableReader.GetValue<string>("SchoolTermId"),
+                            ecfTableReader.GetValue<string>("SchoolClassId"),
+                            ecfTableReader.GetValue<string>("StudentId")
+                        );
+
+                        student.Career.Add(career);                        
+                    } 
+                    
+                    StudentSubjects studentSubjects = new StudentSubjects(
                         ecfTableReader.GetValue<string>("SubjectId"),
                         ecfTableReader.GetValue<string>("TeacherId"),
-                        ecfTableReader.GetValue<string>("Grade1ValueId")
-                        )
-                    );
-                } else
-                {
-                    career.EcfIds.SubjectId = ecfTableReader.GetValue<string>("SubjectId");
-                    career.EcfIds.TeacherId = ecfTableReader.GetValue<string>("TeacherId");
-                    career.EcfIds.Grade1ValueId = ecfTableReader.GetValue<string>("Grade1ValueId");
-                }                
+                        ecfTableReader.GetValue<string>("Grade1ValueId"),
+                        ecfTableReader.GetValue<string>("CourseNo"),
+                        ecfTableReader.GetValue<string>("CourseTypeId"),
+                        ecfTableReader.GetValue<string>("Grade1AchievementTypeId"),
+                        ecfTableReader.GetValue<string>("Passfail")
+                        );
+                        
+                    career.StudentSubjects.Add(studentSubjects);
+                    
+                }
             }
         }
 
@@ -134,25 +146,31 @@ namespace Ecf.Magellan
             {
                 var studentId = ecfTableReader.GetValue<string>("StudentId");
                 var student = students.Find(s => s.EcfId.Equals(studentId));
+                var schoolTermId = ecfTableReader.GetValue<string>("SchoolTermId");
+                var schoolClassId = ecfTableReader.GetValue<string>("SchoolClassId");
 
-                if (student == null)
+                if (!String.IsNullOrEmpty(studentId) && !String.IsNullOrEmpty(schoolTermId) && !String.IsNullOrEmpty(schoolClassId))
                 {
-                    student = new Students(studentId);
-                    students.Add(student);
-                }
 
-                student.Career.Add(new Career(
-                    ecfTableReader.GetValue<string>("Id"),
-                    ecfTableReader.GetValue<string>("SchoolTermId"),
-                    ecfTableReader.GetValue<string>("SchoolClassId"),
-                    ecfTableReader.GetValue<string>("StudentId"),
-                    ecfTableReader.GetValue<string>("Status")
-                    )
-                );
+                    if (student == null)
+                    {
+                        student = new Students(studentId);
+                        students.Add(student);
+                    }
+
+                    student.Career.Add(new Career(
+                        ecfTableReader.GetValue<string>("Id"),
+                        ecfTableReader.GetValue<string>("SchoolTermId"),
+                        ecfTableReader.GetValue<string>("SchoolClassId"),
+                        ecfTableReader.GetValue<string>("StudentId"),
+                        ecfTableReader.GetValue<string>("Status")
+                        )
+                    );
+                }
             }
 
             // Sort student careers
-            students.ForEach(s => s.Career.Sort((x, y) => x.EcfIds.SchoolTermId.CompareTo(y.EcfIds.SchoolTermId)));
+            students.ForEach(s => s.Career.Sort((x, y) => x.EcfValues.SchoolTermId.CompareTo(y.EcfValues.SchoolTermId)));
 
             students.ForEach(s => s.SetLastGewechseltToN());
 
@@ -165,23 +183,45 @@ namespace Ecf.Magellan
             {
                 var studentId = ecfTableReader.GetValue<string>("StudentId");
                 var student = students.Find(s => s.EcfId.Equals(studentId));
+                var schoolTermId = ecfTableReader.GetValue<string>("SchoolTermId");
+                var schoolClassId = ecfTableReader.GetValue<string>("SchoolClassId");
+                var subjectId = ecfTableReader.GetValue<string>("SubjectId");
 
-                if (student == null)
+                if (!String.IsNullOrEmpty(studentId) && !String.IsNullOrEmpty(schoolTermId) && !String.IsNullOrEmpty(schoolClassId) && !String.IsNullOrEmpty(subjectId))
                 {
-                    student = new Students(studentId);
-                    students.Add(student);
-                }
+                    if (student == null)
+                    {
+                        student = new Students(studentId);
+                        students.Add(student);
+                    }
 
-                student.Career.Add(new Career(
-                    ecfTableReader.GetValue<string>("Id"),
-                    ecfTableReader.GetValue<string>("SchoolTermId"),
-                    ecfTableReader.GetValue<string>("SchoolClassId"),
-                    ecfTableReader.GetValue<string>("StudentId"),
-                    ecfTableReader.GetValue<string>("SubjectId"),
-                    ecfTableReader.GetValue<string>("TeacherId"),
-                    ecfTableReader.GetValue<string>("Grade1ValueId")                    
-                    )
-                );
+                    var careerId = ecfTableReader.GetValue<string>("Id");
+                    var career = student.Career.Find(c => c.EcfValues.Id.Equals(careerId));
+
+                    if (career == null)
+                    {
+                        career = new Career(
+                            ecfTableReader.GetValue<string>("Id"),
+                            ecfTableReader.GetValue<string>("SchoolTermId"),
+                            ecfTableReader.GetValue<string>("SchoolClassId"),
+                            ecfTableReader.GetValue<string>("StudentId")
+                        );
+
+                        student.Career.Add(career);
+                    }
+
+                    StudentSubjects studentSubjects = new StudentSubjects(
+                        ecfTableReader.GetValue<string>("SubjectId"),
+                        ecfTableReader.GetValue<string>("TeacherId"),
+                        ecfTableReader.GetValue<string>("Grade1ValueId"),
+                        ecfTableReader.GetValue<string>("CourseNo"),
+                        ecfTableReader.GetValue<string>("CourseTypeId"),
+                        ecfTableReader.GetValue<string>("Grade1AchievementTypeId"),
+                        ecfTableReader.GetValue<string>("Passfail")
+                    );
+
+                    career.StudentSubjects.Add(studentSubjects);
+                }
             }
         }
 
@@ -198,30 +238,30 @@ namespace Ecf.Magellan
                     foreach (var career in student.Career)
                     {
                         // Find SchoolTerm
-                        GetSchoolTermParts(career.EcfIds.SchoolTermId, out string validFrom, out string validTo);
+                        GetSchoolTermParts(career.EcfValues.SchoolTermId, out string validFrom, out string validTo);
                         dbResult = await RecordExists.SchoolTerm(fbConnection, validFrom, validTo);
                         if (dbResult.Success)
                         {
-                            career.MagellanIds.ZeitraumId = (int)dbResult.Value;
+                            career.MagellanValues.SchoolTermId = (int)dbResult.Value;
 
                             // Find SchoolClass
-                            dbResult = await RecordExists.ByGuidExtern(fbConnection, MagellanTables.SchoolClasses, tenantId, career.EcfIds.SchoolClassId);
+                            dbResult = await RecordExists.ByGuidExtern(fbConnection, MagellanTables.SchoolClasses, tenantId, career.EcfValues.SchoolClassId);
                             if (dbResult.Success)
                             {
-                                career.MagellanIds.KlassenId = (int)dbResult.Value;
+                                career.MagellanValues.SchoolClassId = (int)dbResult.Value;
 
                                 // Find SchoolClassTerm
 
-                                dbResult = await RecordExists.SchoolClassTerm(fbConnection, career.MagellanIds.ZeitraumId, career.EcfIds.SchoolClassId);
+                                dbResult = await RecordExists.SchoolClassTerm(fbConnection, tenantId, career.MagellanValues.SchoolTermId, career.EcfValues.SchoolClassId);
                                 if (dbResult.Success)
                                 {
-                                    career.MagellanIds.KlassenZeitraumId = (int)dbResult.Value;
+                                    career.MagellanValues.ClassTermId = (int)dbResult.Value;
 
                                     // Find SchoolClassAttendance
-                                    dbResult = await RecordExists.StudentSchoolClassAttendances(fbConnection, tenantId, career.MagellanIds.KlassenZeitraumId, student.MagellanId);
+                                    dbResult = await RecordExists.StudentSchoolClassAttendances(fbConnection, tenantId, career.MagellanValues.ClassTermId, student.MagellanId);
                                     if (dbResult.Success)
                                     {
-                                        career.MagellanIds.SchuelerZeitraumId = (int)dbResult.Value;
+                                        career.MagellanValues.StudentTermId = (int)dbResult.Value;
                                     }
                                 }
                             }
@@ -245,47 +285,50 @@ namespace Ecf.Magellan
                     foreach (var career in student.Career)
                     {
                         // Find SchoolTerm
-                        GetSchoolTermParts(career.EcfIds.SchoolTermId, out string validFrom, out string validTo);
+                        GetSchoolTermParts(career.EcfValues.SchoolTermId, out string validFrom, out string validTo);
                         dbResult = await RecordExists.SchoolTerm(fbConnection, validFrom, validTo);
                         if (dbResult.Success)
                         {
-                            career.MagellanIds.ZeitraumId = (int)dbResult.Value;
+                            career.MagellanValues.SchoolTermId = (int)dbResult.Value;
 
                             // Find SchoolClass
-                            dbResult = await RecordExists.ByGuidExtern(fbConnection, MagellanTables.SchoolClasses, tenantId, career.EcfIds.SchoolClassId);
+                            dbResult = await RecordExists.ByGuidExtern(fbConnection, MagellanTables.SchoolClasses, tenantId, career.EcfValues.SchoolClassId);
                             if (dbResult.Success)
                             {
-                                career.MagellanIds.KlassenId = (int)dbResult.Value;
+                                career.MagellanValues.SchoolClassId = (int)dbResult.Value;
 
                                 // Find SchoolClassTerm
-                                dbResult = await RecordExists.SchoolClassTerm(fbConnection, career.MagellanIds.ZeitraumId, career.EcfIds.SchoolClassId);
+                                dbResult = await RecordExists.SchoolClassTerm(fbConnection, tenantId, career.MagellanValues.SchoolTermId, career.EcfValues.SchoolClassId);
                                 if (dbResult.Success)
                                 {
-                                    career.MagellanIds.KlassenZeitraumId = (int)dbResult.Value;
+                                    career.MagellanValues.ClassTermId = (int)dbResult.Value;
 
                                     // Find SchoolClassAttendance
-                                    dbResult = await RecordExists.StudentSchoolClassAttendances(fbConnection, tenantId, career.MagellanIds.KlassenZeitraumId, student.MagellanId);
+                                    dbResult = await RecordExists.StudentSchoolClassAttendances(fbConnection, tenantId, career.MagellanValues.ClassTermId, student.MagellanId);
                                     if (dbResult.Success)
                                     {
-                                        career.MagellanIds.SchuelerZeitraumId = (int)dbResult.Value;
+                                        career.MagellanValues.StudentTermId = (int)dbResult.Value;
 
-                                        dbResult = await RecordExists.Subject(fbConnection, tenantId, career.EcfIds.SubjectId);
-                                        if (dbResult.Success)
+                                        foreach (var studentSubject in career.StudentSubjects)
                                         {
-                                            career.MagellanIds.FachId = (int)dbResult.Value;
-
-                                            dbResult = await RecordExists.ByGuidExtern(fbConnection, MagellanTables.Teachers, tenantId, career.EcfIds.TeacherId);
+                                            dbResult = await RecordExists.Subject(fbConnection, tenantId, studentSubject.EcfValues.SubjectId);
                                             if (dbResult.Success)
                                             {
-                                                career.MagellanIds.LehrerId = (int)dbResult.Value;
-                                            }
+                                                studentSubject.MagellanValues.SubjectId = (int)dbResult.Value;
 
-                                            dbResult = await RecordExists.ByCode(fbConnection, MagellanTables.GradeValues, career.EcfIds.Grade1ValueId);
-                                            if (dbResult.Success)
-                                            {
-                                                career.MagellanIds.Endnote1Id = (int)dbResult.Value;
+                                                dbResult = await RecordExists.ByGuidExtern(fbConnection, MagellanTables.Teachers, tenantId, studentSubject.EcfValues.TeacherId);
+                                                if (dbResult.Success)
+                                                {
+                                                    studentSubject.MagellanValues.TeacherId = (int)dbResult.Value;
+                                                }
+
+                                                dbResult = await RecordExists.ByCode(fbConnection, MagellanTables.GradeValues, studentSubject.EcfValues.Grade1ValueId);
+                                                if (dbResult.Success)
+                                                {
+                                                    studentSubject.MagellanValues.Grade1ValueId = (int)dbResult.Value;
+                                                }
                                             }
-                                        }                                        
+                                        }                                                                            
                                     }
                                 }
                             }
@@ -296,24 +339,29 @@ namespace Ecf.Magellan
             }
         }
 
-
-        public static void SetParamValue(FbCommand fbCommand, string ParamName, FbDbType ParamType, object ParamValue, object DefaultValue = null)
+        public static void SetParamValue(FbCommand fbCommand, string paramName, FbDbType paramType, object paramValue, object defaultValue = null)
         {
-            if (DefaultValue == null) DefaultValue = String.Empty;
+            if (defaultValue == null) defaultValue = String.Empty;
 
-            if ((ParamValue == null) || string.IsNullOrEmpty(ParamValue.ToString()))
+            if ((paramValue == null) || string.IsNullOrEmpty(paramValue.ToString()))
             {
-                if (ParamValue == null || string.IsNullOrEmpty(DefaultValue.ToString()))
+                if (paramValue == null || string.IsNullOrEmpty(defaultValue.ToString()))
                 {
-                    fbCommand.Parameters.Add(ParamName, DBNull.Value);
+                    fbCommand.Parameters.Add(paramName, DBNull.Value);
                 }
                 else
                 {
-                    fbCommand.Parameters.Add(ParamName, DefaultValue);
+                    fbCommand.Parameters.Add(paramName, defaultValue);
                 }
             }
             else
-                fbCommand.Parameters.Add(ParamName, ParamType).Value = ParamValue;
+            {                
+               if (((paramType == FbDbType.BigInt) || (paramType == FbDbType.Integer)) && ((int)paramValue < 1) )
+                    fbCommand.Parameters.Add(paramName, DBNull.Value);
+               else
+                    fbCommand.Parameters.Add(paramName, paramType).Value = paramValue;
+            }
+                
         }      
     }
 }

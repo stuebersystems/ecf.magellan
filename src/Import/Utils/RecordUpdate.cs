@@ -361,7 +361,7 @@ namespace Ecf.Magellan
             return success > 0;
         }
 
-        public static async Task<bool> StudentSubject(FbConnection fbConnection, EcfTableReader ecfTableReader, int tenantId, int studentSubjectId, MagellanIds magellanIds)
+        public static async Task<bool> StudentSubject(FbConnection fbConnection, int tenantId, int studentSubjectId, StudentSubjects studentSubject)
         {
             var success = 0;
 
@@ -381,10 +381,10 @@ namespace Ecf.Magellan
 
                 Helper.SetParamValue(fbCommand, "@TenantId", FbDbType.BigInt, tenantId);
                 Helper.SetParamValue(fbCommand, "@StudentSubjectId", FbDbType.BigInt, studentSubjectId);
-                Helper.SetParamValue(fbCommand, "@TeacherId", FbDbType.BigInt, magellanIds.LehrerId);
-                Helper.SetParamValue(fbCommand, "@Grade1ValueId", FbDbType.BigInt, magellanIds.Endnote1Id);
-                Helper.SetParamValue(fbCommand, "@Grade1AchievementTypeId", FbDbType.VarChar, ecfTableReader.GetValue<string>("Grade1AchievementTypeId"));
-                Helper.SetParamValue(fbCommand, "@Passfail", FbDbType.VarChar, Convert.Passfail(ecfTableReader.GetValue<string>("Passfail")));
+                Helper.SetParamValue(fbCommand, "@TeacherId", FbDbType.BigInt, studentSubject.MagellanValues.TeacherId);
+                Helper.SetParamValue(fbCommand, "@Grade1ValueId", FbDbType.BigInt, studentSubject.MagellanValues.Grade1ValueId);
+                Helper.SetParamValue(fbCommand, "@Grade1AchievementTypeId", FbDbType.VarChar, studentSubject.EcfValues.Grade1AchievementTypeId);
+                Helper.SetParamValue(fbCommand, "@Passfail", FbDbType.VarChar, Convert.Passfail(studentSubject.EcfValues.Passfail));
 
                 success = await fbCommand.ExecuteNonQueryAsync();
                 await fbTransaction.CommitAsync();

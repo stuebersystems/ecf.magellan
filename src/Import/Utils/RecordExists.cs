@@ -33,12 +33,12 @@ namespace Ecf.Magellan
         {
             string sql =
                 $"SELECT \"ID\" FROM \"{tableName}\" " +
-                "WHERE \"Kuerzel\" = @code";
+                "WHERE \"Kuerzel\" = @Code";
 
             using var fbTransaction = fbConnection.BeginTransaction();
             using var fbCommand = new FbCommand(sql, fbConnection, fbTransaction);
 
-            fbCommand.Parameters.Add("code", code);            
+            Helper.SetParamValue(fbCommand, "@Code", FbDbType.VarChar, code);
 
             var sqlReader = await fbCommand.ExecuteReaderAsync();
             var id = -1;
@@ -67,16 +67,16 @@ namespace Ecf.Magellan
 
             string sql =
                 $"SELECT \"ID\" FROM \"{tableName}\" " +
-                $"WHERE " + 
+                "WHERE " + 
                 "  \"Mandant\" = @TenantId AND " +
-                "  \"{codeColumn}\" = @Code";
+                $"  \"{codeColumn}\" = @Code";
 
             using var fbTransaction = fbConnection.BeginTransaction();
             using var fbCommand = new FbCommand(sql, fbConnection, fbTransaction);
 
-            fbCommand.Parameters.Add("@TenantId", tenantId);
-            fbCommand.Parameters.Add("@Code", code);
-
+            Helper.SetParamValue(fbCommand, "@TenantId", FbDbType.BigInt, tenantId);
+            Helper.SetParamValue(fbCommand, "@Code", FbDbType.VarChar, code);
+            
             var sqlReader = await fbCommand.ExecuteReaderAsync();
             var id = -1;
             var numberOfRecords = 0;
@@ -93,10 +93,9 @@ namespace Ecf.Magellan
             return new DbResult(false, -1); ;
         }
 
-
-        public static async Task<DbResult> ByGuidExtern(FbConnection fbConnection, string tableName, int tenantId, string guidId)
+        public static async Task<DbResult> ByGuidExtern(FbConnection fbConnection, string tableName, int tenantId, string ecfId)
         {
-            Guid guidExtern = GuidFactory.Create(GuidFactory.DnsNamespace, guidId);
+            Guid guidExtern = GuidFactory.Create(GuidFactory.DnsNamespace, ecfId);
 
             string sql =
                 $"SELECT \"ID\" FROM \"{tableName}\" " +
@@ -107,8 +106,8 @@ namespace Ecf.Magellan
             using var fbTransaction = fbConnection.BeginTransaction();
             using var fbCommand = new FbCommand(sql, fbConnection, fbTransaction);
 
-            fbCommand.Parameters.Add("@TenantId", tenantId);
-            fbCommand.Parameters.Add("@GUIDExtern", guidExtern);
+            Helper.SetParamValue(fbCommand, "@TenantId", FbDbType.BigInt, tenantId);
+            Helper.SetParamValue(fbCommand, "@GUIDExtern", FbDbType.VarChar, guidExtern);            
 
             var sqlReader = await fbCommand.ExecuteReaderAsync();
             var id = -1;
@@ -126,21 +125,23 @@ namespace Ecf.Magellan
             return new DbResult(false, -1); ;
         }
 
-        public static async Task<DbResult> SchoolClassTerm(FbConnection fbConnection, int schoolTermId, string schoolClassId)
+        public static async Task<DbResult> SchoolClassTerm(FbConnection fbConnection, int tenantId, int schoolTermId, string schoolClassId)
         {
             Guid guidExtern = GuidFactory.Create(GuidFactory.DnsNamespace, schoolClassId);
 
             string sql =
                 "SELECT \"KlassenZeitraumID\" FROM \"KlassenAnsicht\" " +
                 "WHERE " +
-                "  \"Zeitraum\" = @SchoolTermId and " +
+                "  \"Mandant\" = @TenantId AND " +
+                "  \"Zeitraum\" = @SchoolTermId AND " +
                 "  \"GUIDExtern\" = @GUIDExtern";
 
             using var fbTransaction = fbConnection.BeginTransaction();
             using var fbCommand = new FbCommand(sql, fbConnection, fbTransaction);
 
-            fbCommand.Parameters.Add("SchoolTermId", schoolTermId);
-            fbCommand.Parameters.Add("GUIDExtern", guidExtern);
+            Helper.SetParamValue(fbCommand, "@TenantId", FbDbType.BigInt, tenantId);
+            Helper.SetParamValue(fbCommand, "@SchoolTermId", FbDbType.BigInt, schoolTermId);
+            Helper.SetParamValue(fbCommand, "@GUIDExtern", FbDbType.VarChar, guidExtern);
 
             var sqlReader = await fbCommand.ExecuteReaderAsync();
             var id = -1;
@@ -169,8 +170,8 @@ namespace Ecf.Magellan
             using var fbTransaction = fbConnection.BeginTransaction();
             using var fbCommand = new FbCommand(sql, fbConnection, fbTransaction);
 
-            fbCommand.Parameters.Add("validFrom", validFrom);
-            fbCommand.Parameters.Add("validTo", validTo);
+            Helper.SetParamValue(fbCommand, "@validFrom", FbDbType.Date, validFrom);
+            Helper.SetParamValue(fbCommand, "@validTo", FbDbType.Date, validTo);            
             
             var sqlReader = await fbCommand.ExecuteReaderAsync();
             var id = -1;
@@ -200,9 +201,9 @@ namespace Ecf.Magellan
             using var fbTransaction = fbConnection.BeginTransaction();
             using var fbCommand = new FbCommand(sql, fbConnection, fbTransaction);
 
-            fbCommand.Parameters.Add("@TenantId", tenantId);
-            fbCommand.Parameters.Add("@StudentId", studentId);
-            fbCommand.Parameters.Add("@CustodianId", custodianId);
+            Helper.SetParamValue(fbCommand, "@TenantId", FbDbType.BigInt, tenantId);
+            Helper.SetParamValue(fbCommand, "@StudentId", FbDbType.BigInt, studentId);
+            Helper.SetParamValue(fbCommand, "@CustodianId", FbDbType.BigInt, custodianId);            
 
             var sqlReader = await fbCommand.ExecuteReaderAsync();
             var id = -1;
@@ -231,10 +232,10 @@ namespace Ecf.Magellan
 
             using var fbTransaction = fbConnection.BeginTransaction();
             using var fbCommand = new FbCommand(sql, fbConnection, fbTransaction);
-
-            fbCommand.Parameters.Add("@TenantId", tenantId);
-            fbCommand.Parameters.Add("@ClassTermId", classTermId);
-            fbCommand.Parameters.Add("@StudentId", studentId);            
+            
+            Helper.SetParamValue(fbCommand, "@TenantId", FbDbType.BigInt, tenantId);
+            Helper.SetParamValue(fbCommand, "@ClassTermId", FbDbType.BigInt, classTermId);
+            Helper.SetParamValue(fbCommand, "@StudentId", FbDbType.BigInt, studentId);                       
 
             var sqlReader = await fbCommand.ExecuteReaderAsync();
             var id = -1;
@@ -252,10 +253,10 @@ namespace Ecf.Magellan
             return new DbResult(false, id); ;
         }
 
-        public static async Task<DbResult> StudentSubject(FbConnection fbConnection, EcfTableReader ecfTableReader, int tenantId, MagellanIds magellanIds)
-        {
+        public static async Task<DbResult> StudentSubject(FbConnection fbConnection, int tenantId, int studentTermId, StudentSubjects studentSubject)
+        {            
             string sql =
-                "SELECT \"ID\" FROM \"Fachdaten\" " +
+                "SELECT \"ID\" FROM \"SchuelerFachdaten\" " +
                 "WHERE " +
                 "  \"Mandant\" = @TenantId AND " +
                 "  \"SchuelerZeitraumID\" = @SchuelerZeitraumId AND " +
@@ -265,12 +266,12 @@ namespace Ecf.Magellan
 
             using var fbTransaction = fbConnection.BeginTransaction();
             using var fbCommand = new FbCommand(sql, fbConnection, fbTransaction);
-
-            fbCommand.Parameters.Add("@TenantId", tenantId);
-            fbCommand.Parameters.Add("@SchuelerZeitraumId", magellanIds.SchuelerZeitraumId);
-            fbCommand.Parameters.Add("@SubjectId", magellanIds.FachId);
-            fbCommand.Parameters.Add("@Unterrichtsart", ecfTableReader.GetValue<string>("CourseNo"));
-            fbCommand.Parameters.Add("@CourseNo", ecfTableReader.GetValue<string>("CourseTypeId"));
+            
+            Helper.SetParamValue(fbCommand, "@TenantId", FbDbType.BigInt, tenantId);
+            Helper.SetParamValue(fbCommand, "@SchuelerZeitraumId", FbDbType.BigInt, studentTermId);
+            Helper.SetParamValue(fbCommand, "@SubjectId", FbDbType.BigInt, studentSubject.MagellanValues.SubjectId);
+            Helper.SetParamValue(fbCommand, "@CourseNo", FbDbType.SmallInt, studentSubject.EcfValues.CourseNo);
+            Helper.SetParamValue(fbCommand, "@CourseTypeId", FbDbType.VarChar, studentSubject.EcfValues.CourseTypeId);
 
             var sqlReader = await fbCommand.ExecuteReaderAsync();
             var id = -1;
@@ -287,7 +288,6 @@ namespace Ecf.Magellan
 
             return new DbResult(false, id); ;
         }
-
 
         public static async Task<DbResult> Subject(FbConnection fbConnection, int tenantId, string code)
         {
@@ -299,9 +299,9 @@ namespace Ecf.Magellan
 
             using var fbTransaction = fbConnection.BeginTransaction();
             using var fbCommand = new FbCommand(sql, fbConnection, fbTransaction);
-
-            fbCommand.Parameters.Add("@TenantId", tenantId);
-            fbCommand.Parameters.Add("@Code", code);
+            
+            Helper.SetParamValue(fbCommand, "@TenantId", FbDbType.BigInt, tenantId);
+            Helper.SetParamValue(fbCommand, "@Code", FbDbType.VarChar, code);
 
             var sqlReader = await fbCommand.ExecuteReaderAsync();
             var id = -1;
@@ -327,12 +327,12 @@ namespace Ecf.Magellan
             string sql =
                 $"SELECT \"Kuerzel\" FROM \"{tableName}\" " +
                 "WHERE " +
-                "  \"Kuerzel\" = @code";
+                "  \"Kuerzel\" = @Code";
 
             using var fbTransaction = fbConnection.BeginTransaction();
             using var fbCommand = new FbCommand(sql, fbConnection, fbTransaction);
 
-            fbCommand.Parameters.Add("code", code);            
+            Helper.SetParamValue(fbCommand, "@Code", FbDbType.VarChar, code);
 
             var sqlReader = await fbCommand.ExecuteReaderAsync();
             code = String.Empty;
@@ -344,7 +344,7 @@ namespace Ecf.Magellan
                 numberOfRecords++;
             }
 
-            if (numberOfRecords == 1) new DbResult(true, code);
+            if (numberOfRecords == 1) return new DbResult(true, code);
 
             return new DbResult(false, null);
         }

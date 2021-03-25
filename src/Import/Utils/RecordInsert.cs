@@ -234,22 +234,13 @@ namespace Ecf.Magellan
 
         public static async Task<bool> SchoolTerm(FbConnection fbConnection, EcfTableReader ecfTableReader)
         {
-            int section;
-            switch (ecfTableReader.GetValue<string>("Section"))
+            var section = ecfTableReader.GetValue<string>("Section") switch
             {
-                case "1":
-                    section = 0;
-                    break;
-                case "2":
-                    section = 1;
-                    break;
-                case "3":
-                    section = 2;
-                    break;
-                default:
-                    section = -1;
-                    break;
-            }
+                "1" => 0,
+                "2" => 1,
+                "3" => 2,
+                _ => -1,
+            };
 
             var success = 0;
             var sql =
@@ -414,8 +405,7 @@ namespace Ecf.Magellan
             return success > 0;
         }
 
-        public static async Task<DbResult> StudentSchoolClassAttendance(FbConnection fbConnection, EcfTableReader ecfTableReader, int tenantId, int studentId, 
-            MagellanIds magellanIds, string gewechselt)
+        public static async Task<DbResult> StudentSchoolClassAttendance(FbConnection fbConnection, int tenantId, int studentId, Career career)
         {            
             var id = -1;
             
@@ -427,7 +417,7 @@ namespace Ecf.Magellan
                 "  \"TeilnahmeZusatzangebot\", \"SportBefreit\" " +
                 ") " +
                 "VALUES ( " +
-                "  @TenantId, @SchoolClassTermId, @StudentId, " +
+                "  @TenantId, @ClassTermId, @StudentId, " +
                 "  @SchoolClassId, @SchoolTermId, @Gewechselt, " +
                 "  @TeilnahmeZusatzangebot, @SportBefreit " +
                 ") RETURNING ID";
@@ -438,11 +428,11 @@ namespace Ecf.Magellan
                 using var fbCommand = new FbCommand(sql, fbConnection, fbTransaction);
 
                 Helper.SetParamValue(fbCommand, "@TenantId", FbDbType.BigInt, tenantId);
-                Helper.SetParamValue(fbCommand, "@SchoolClassTermId", FbDbType.BigInt, magellanIds.KlassenZeitraumId);
+                Helper.SetParamValue(fbCommand, "@ClassTermId", FbDbType.BigInt, career.MagellanValues.ClassTermId);
                 Helper.SetParamValue(fbCommand, "@StudentId", FbDbType.BigInt, studentId);
-                Helper.SetParamValue(fbCommand, "@SchoolClassId", FbDbType.BigInt, magellanIds.KlassenId);
-                Helper.SetParamValue(fbCommand, "@SchoolTermId", FbDbType.BigInt, magellanIds.ZeitraumId);
-                Helper.SetParamValue(fbCommand, "@Gewechselt", FbDbType.VarChar, gewechselt);
+                Helper.SetParamValue(fbCommand, "@SchoolClassId", FbDbType.BigInt, career.MagellanValues.SchoolClassId);
+                Helper.SetParamValue(fbCommand, "@SchoolTermId", FbDbType.BigInt, career.MagellanValues.SchoolTermId);
+                Helper.SetParamValue(fbCommand, "@Gewechselt", FbDbType.VarChar, career.MagellanValues.Gewechselt);
                 Helper.SetParamValue(fbCommand, "@TeilnahmeZusatzangebot", FbDbType.VarChar, "N");
                 Helper.SetParamValue(fbCommand, "@SportBefreit", FbDbType.VarChar, "N");
 
@@ -464,7 +454,7 @@ namespace Ecf.Magellan
             return new DbResult(false, id);
         }
 
-        public static async Task<bool> StudentSubject(FbConnection fbConnection, EcfTableReader ecfTableReader, int tenantId, int studentId, MagellanIds magellanIds)
+        public static async Task<bool> StudentSubject(FbConnection fbConnection, int tenantId, int studentId, Career career, StudentSubjects studentSubject)
         {
             var success = 0;
 
@@ -474,7 +464,7 @@ namespace Ecf.Magellan
                 "  \"Mandant\", \"SchuelerZeitraumID\", \"Schueler\", " +
                 "  \"Klasse\", \"Zeitraum\", \"Fach\", \"Lehrer\", " +
                 "  \"KursNr\", \"Unterrichtsart\", \"Endnote1\", " +
-                "  \"Leistungsart\", \"Bestanden\", " +
+                "  \"Leistungsart\", \"Bestanden\" " +
                 ") " +
                 "VALUES ( " +
                 "  @TenantId, @StudentTermId, @StudentId, " +
@@ -489,17 +479,17 @@ namespace Ecf.Magellan
                 using var fbCommand = new FbCommand(sql, fbConnection, fbTransaction);
 
                 Helper.SetParamValue(fbCommand, "@TenantId", FbDbType.BigInt, tenantId);
-                Helper.SetParamValue(fbCommand, "@StudentTermId", FbDbType.BigInt, magellanIds.SchuelerZeitraumId);
+                Helper.SetParamValue(fbCommand, "@StudentTermId", FbDbType.BigInt, career.MagellanValues.StudentTermId);
                 Helper.SetParamValue(fbCommand, "@StudentId", FbDbType.BigInt, studentId);
-                Helper.SetParamValue(fbCommand, "@SchoolClassId", FbDbType.BigInt, magellanIds.KlassenId);
-                Helper.SetParamValue(fbCommand, "@SchoolTermId", FbDbType.BigInt, magellanIds.ZeitraumId);
-                Helper.SetParamValue(fbCommand, "@SubjectId", FbDbType.BigInt, magellanIds.ZeitraumId);
-                Helper.SetParamValue(fbCommand, "@TeacherId", FbDbType.BigInt, magellanIds.LehrerId);
-                Helper.SetParamValue(fbCommand, "@CourseNo", FbDbType.SmallInt, ecfTableReader.GetValue<string>("CourseNo"));
-                Helper.SetParamValue(fbCommand, "@CourseTypeId", FbDbType.SmallInt, ecfTableReader.GetValue<string>("CourseTypeId"));
-                Helper.SetParamValue(fbCommand, "@Grade1ValueId", FbDbType.BigInt, magellanIds.Endnote1Id);
-                Helper.SetParamValue(fbCommand, "@Grade1AchievementTypeId", FbDbType.VarChar, ecfTableReader.GetValue<string>("Grade1AchievementTypeId"));
-                Helper.SetParamValue(fbCommand, "@Passfail", FbDbType.VarChar, Convert.Passfail(ecfTableReader.GetValue<string>("Passfail")));
+                Helper.SetParamValue(fbCommand, "@SchoolClassId", FbDbType.BigInt, career.MagellanValues.SchoolClassId);
+                Helper.SetParamValue(fbCommand, "@SchoolTermId", FbDbType.BigInt, career.MagellanValues.SchoolTermId);
+                Helper.SetParamValue(fbCommand, "@SubjectId", FbDbType.BigInt, studentSubject.MagellanValues.SubjectId);
+                Helper.SetParamValue(fbCommand, "@TeacherId", FbDbType.BigInt, studentSubject.MagellanValues.TeacherId);
+                Helper.SetParamValue(fbCommand, "@CourseNo", FbDbType.SmallInt, studentSubject.EcfValues.CourseNo);
+                Helper.SetParamValue(fbCommand, "@CourseTypeId", FbDbType.SmallInt, studentSubject.EcfValues.CourseTypeId);
+                Helper.SetParamValue(fbCommand, "@Grade1ValueId", FbDbType.BigInt, studentSubject.MagellanValues.Grade1ValueId);
+                Helper.SetParamValue(fbCommand, "@Grade1AchievementTypeId", FbDbType.VarChar, studentSubject.EcfValues.Grade1AchievementTypeId);
+                Helper.SetParamValue(fbCommand, "@Passfail", FbDbType.VarChar, Convert.Passfail(studentSubject.EcfValues.Passfail));
 
 
                 success = await fbCommand.ExecuteNonQueryAsync();
@@ -508,7 +498,7 @@ namespace Ecf.Magellan
             catch (Exception e)
             {
                 await fbTransaction.RollbackAsync();
-                Console.WriteLine($"[INSERT ERROR] [SchuelerZeitraeume] {e.Message}");
+                Console.WriteLine($"[INSERT ERROR] [SchuelerFachdaten] {e.Message}");
             }
 
             return success > 0;
