@@ -36,7 +36,7 @@ namespace Ecf.Magellan
     {
         private readonly int _schoolTermId;
         private readonly int _tenantId;
-        private bool _isVersion7 = true;
+        private int _version = 0;
         private int _recordCounter = 0;
         private int _tableCounter = 0;
 
@@ -60,13 +60,13 @@ namespace Ecf.Magellan
                 {
                     _tableCounter = 0;
                     _recordCounter = 0;
-                    _isVersion7 = await IsMagellanVersion7(connection);
+                    _version = await ReadMagellanVersion(connection);
 
                     // Report status
                     Console.WriteLine();
                     Console.WriteLine("[Extracting] Start...");
 
-                    // Preperation
+                    // Preparation
                     PrepareExportFolder();
 
                     // Catalogs
@@ -129,9 +129,9 @@ namespace Ecf.Magellan
 
                 // Init ECF Writer
                 var ecfTablefWriter = new EcfTableWriter(csvWriter);
-
-                if (!_isVersion7)
-                {
+                
+                if (_version < 7)
+                    {
                     ecfTablefWriter.AddConverter<object>(new CsvWin1251Converter());
                 }
 
@@ -361,7 +361,7 @@ namespace Ecf.Magellan
         {
             string sql;
 
-            if (_isVersion7)
+            if (_version >= 7)
             {
                 sql =
                     $"select S.* from \"Schueler\" S " +
@@ -435,7 +435,7 @@ namespace Ecf.Magellan
         {
             string sql;
 
-            if (_isVersion7)
+            if (_version >= 7)
             {
                 sql =
                     $"select Z.*, K.\"Zugang\", K.\"Abgang\" from \"SchuelerZeitraeume\" as Z " +
@@ -507,7 +507,7 @@ namespace Ecf.Magellan
         {
             string sql;
 
-            if (_isVersion7)
+            if (_version >= 7)
             {
                 sql =
                     $"select F.\"ID\", F.\"Klasse\", F.\"Schueler\", F.\"KursNr\", F.\"Unterrichtsart\", F.\"Fachstatus\", F.\"Fach\", " +
@@ -767,16 +767,26 @@ namespace Ecf.Magellan
             return ecfRecordCounter;
         }
 
-        private async Task<bool> IsMagellanVersion7(FbConnection fbConnection)
+        private async Task<int> ReadMagellanVersion(FbConnection fbConnection)
         {
-            var sql = "select first 1 * from \"SchuelerKlassen\"";
+            var sql = "select first 1 \"Release\" from \"Version\"";
 
             using var fbTransaction = fbConnection.BeginTransaction();
             using var fbCommand = new FbCommand(sql, fbConnection, fbTransaction);
 
             using var reader = await fbCommand.ExecuteReaderAsync();
 
-            return reader.HasColumn("SchuelerZeitraumID");
-        }
+            var version = reader.GetInt32(reader.GetOrdinal("Release"));
+
+            if (version >= 800) 
+                return 8;
+            else
+            if (version >= 700) 
+                return 7;
+            else
+                return 6;
+            
+            
+        }    
     }
 }
