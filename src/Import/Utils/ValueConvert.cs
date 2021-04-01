@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace Ecf.Magellan
 {
-    public static class Convert
+    public static class ValueConvert
     {
         public static string Gender(string value)
         {

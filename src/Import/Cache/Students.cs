@@ -1,14 +1,30 @@
-﻿using System;
+﻿#region ENBREA - Copyright (C) 2021 STÜBER SYSTEMS GmbH
+/*    
+ *    ENBREA
+ *    
+ *    Copyright (C) 2021 STÜBER SYSTEMS GmbH
+ *
+ *    This program is free software: you can redistribute it and/or modify
+ *    it under the terms of the GNU Affero General Public License, version 3,
+ *    as published by the Free Software Foundation.
+ *
+ *    This program is distributed in the hope that it will be useful,
+ *    but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ *    GNU Affero General Public License for more details.
+ *
+ *    You should have received a copy of the GNU Affero General Public License
+ *    along with this program. If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+#endregion
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
 namespace Ecf.Magellan
 {
-
-    // Id;SchoolTermId;SchoolClassId;StudentId;Status
-    // 5522-2017-1-11;2017-1;2017-1-11;5522;N
-
-
     public struct CareerEcfValues
     {
         /// <summary>
@@ -22,9 +38,9 @@ namespace Ecf.Magellan
         public string SchoolTermId { get; set; }
 
         /// <summary>
-        /// Incoming SchoolClass Id
+        /// Incoming ClassTerm Id
         /// </summary>
-        public string SchoolClassId { get; set; }
+        public string ClassTermId { get; set; }
 
         /// <summary>
         /// Incoming Student Id
@@ -137,12 +153,11 @@ namespace Ecf.Magellan
         public List<StudentSubjects> StudentSubjects { get; set; }
 
 
-        public Career(string Id, string SchoolTermId, string SchoolClassId, string StudentId, string Status)
+        public Career(string Id, string SchoolTermId, string ClassTermId, string Status)
         {
             EcfValues.Id = Id;
             EcfValues.SchoolTermId = SchoolTermId;
-            EcfValues.SchoolClassId = SchoolClassId;
-            EcfValues.StudentId = StudentId;
+            EcfValues.ClassTermId = ClassTermId;            
             EcfValues.Status = Status;
 
             MagellanValues.Gewechselt = "+";
@@ -150,22 +165,33 @@ namespace Ecf.Magellan
             StudentSubjects = new List<StudentSubjects>();
         }
 
-        public Career(string Id, string SchoolTermId, string SchoolClassId, string StudentId)
+        public Career(string Id, string SchoolTermId, string ClassTermId)
         {            
             EcfValues.Id = Id;
             EcfValues.SchoolTermId = SchoolTermId;
-            EcfValues.SchoolClassId = SchoolClassId;
-            EcfValues.StudentId = StudentId;
+            EcfValues.ClassTermId = ClassTermId;            
 
             StudentSubjects = new List<StudentSubjects>();
         }
 
+        public bool Validate(bool validateStudentTerm, out string wrongValues)
+        {
+            wrongValues = String.Empty;
+            
+            if (!(MagellanValues.SchoolClassId > 0)) wrongValues = String.Join(",", wrongValues, "SchoolClassId");      // no ecf-value cached
+            if (!(MagellanValues.SchoolTermId > 0)) wrongValues = String.Join(",", wrongValues, $"SchoolTermId ({EcfValues.SchoolTermId})");
+            if (!(MagellanValues.ClassTermId > 0)) wrongValues = String.Join(",", wrongValues, $"SchoolClassTermId  ({EcfValues.ClassTermId})");
+            if (validateStudentTerm)
+                if (!(MagellanValues.StudentTermId > 0)) wrongValues = String.Join(",", wrongValues, $"StudentTermId  ({EcfValues.Id})");
+
+            return String.IsNullOrEmpty(wrongValues);
+        }                
     }
 
     public class Students
     {
         /// <summary>
-        /// Incoming Ids from Ecf
+        /// Incoming Id from Ecf
         /// </summary>
         public string EcfId { get; set; }
 
@@ -174,8 +200,10 @@ namespace Ecf.Magellan
         /// </summary>
         public int MagellanId { get; set; }
 
+        /// <summary>
+        /// List of Career
+        /// </summary>
         public List<Career> Career { get; set; }
-
 
         public Students(string ecfId)
         {
@@ -183,10 +211,20 @@ namespace Ecf.Magellan
             Career = new List<Career>();
         }
 
+        public Students(string ecfId, int magellanId)
+        {
+            EcfId = ecfId;
+            MagellanId = magellanId;
+            Career = new List<Career>();
+        }
+
         public void SetLastGewechseltToN()
         {
-            Career c = Career.Last();
-            c.MagellanValues.Gewechselt = "N";
+            if (Career.Count > 0)
+            {
+                Career c = Career.Last();
+                c.MagellanValues.Gewechselt = "N";
+            }            
         }
 
         /// <summary>

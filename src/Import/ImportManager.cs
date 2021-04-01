@@ -41,6 +41,7 @@ namespace Ecf.Magellan
         private int _tableCounter = 0;
         private string _currentCsv;
         private readonly List<Students> _students;
+        private readonly List<SimpleCache> _schoolTerms;
 
         public ImportManager(
             Configuration config,
@@ -52,6 +53,7 @@ namespace Ecf.Magellan
             _schoolTermId = _config.EcfImport.SchoolTermId;
             _sourceFolder = new DirectoryInfo(_config.EcfImport.SourceFolderName);
             _students = new List<Students>();
+            _schoolTerms = new List<SimpleCache>();
         }
 
         public override async Task Execute()
@@ -68,30 +70,23 @@ namespace Ecf.Magellan
                     // read all import-files in source folder 
                     var ecfFiles = _sourceFolder.GetFiles(DefaultSearchPattern);
 
-                    // if found import every found file in given dependency order
+                    // processes every found import file in given dependency order
                     if (ecfFiles.Length > 0)
-                    {
-                        // Report status
-
-                        /*
-
-                        // SchoolTerms
-                        await Execute(EcfTables.SchoolTerms, connection, async (c, r) => await ImportSchoolTerms(c, r));
-
+                    {                                                 
+                        // SchoolTerms, only if not given by configuration
+                        if (_schoolTermId < 1) await Execute(EcfTables.SchoolTerms, connection, async (c, r) => await ImportSchoolTerms(c, r));                        
+                         
                         // Catalogs
                         await Execute(EcfTables.AchievementTypes, connection, async (c, r) => await ImportTokenCatalog(c, r));
                         
-                        // do not import, use Standard MAGELLAN Catalog: Nationalities
+                        // do not import, use Standard MAGELLAN Catalog: Nationalities -> Staatsangehoerigkeiten
 
-                        await Execute(EcfTables.CourseTypes, connection, async (c, r) => await ImportTokenCatalog(c, r));  
-                        
+                        await Execute(EcfTables.CourseTypes, connection, async (c, r) => await ImportTokenCatalog(c, r));                          
                         await Execute(EcfTables.ForeignLanguages, connection, async (c, r) => await ImportSubjects(c, r)); // Mit Kategorie als "Fremdsprachen"
 
-                        // do not import, not needed: GradeSystems
-                        
+                        // do not import, not needed: GradeSystems                       
                         
                         await Execute(EcfTables.GradeValues, connection, async (c, r) => await ImportTokenCatalog(c, r));
-
                         await Execute(EcfTables.NativeLanguages, connection, async (c, r) => await ImportTokenCatalog(c, r)); 
                         
                         // do not import, not needed: StudentSchoolClassAttendanceStatus
@@ -100,25 +95,16 @@ namespace Ecf.Magellan
                         // Education
 
                         // do not import, not needed: Rooms
-                        
-                        // do not import, need fixes from Frank
-                        await Execute(EcfTables.Subjects, connection, async (c, r) => await ImportSubjects(c, r));                                // Ecf-Datei hat Fehler!
-
+                                                
+                        await Execute(EcfTables.Subjects, connection, async (c, r) => await ImportSubjects(c, r));
                         await Execute(EcfTables.Teachers, connection, async (c, r) => await ImportTeachers(c, r));
-                        await Execute(EcfTables.SchoolClasses, connection, async (c, r) => await ImportSchoolClasses(c, r)); 
+                        await Execute(EcfTables.SchoolClasses, connection, async (c, r) => await ImportSchoolClasses(c, r));
                         await Execute(EcfTables.Custodians, connection, async (c, r) => await ImportCustodians(c, r));
                         await Execute(EcfTables.Students, connection, async (c, r) => await ImportStudents(c, r));
                         await Execute(EcfTables.StudentForeignLanguages, connection, async (c, r) => await ImportStudentForeignLanguages(c, r));
-                        await Execute(EcfTables.StudentCustodians, connection, async (c, r) => await ImportStudentCustodians(c, r));
-                        */
-
+                        await Execute(EcfTables.StudentCustodians, connection, async (c, r) => await ImportStudentCustodians(c, r));                        
                         await Execute(EcfTables.StudentSchoolClassAttendances, connection, async (c, r) => await ImportStudentSchoolClassAttendances(c, r));
-                        await Execute(EcfTables.StudentSubjects, connection, async (c, r) => await ImportStudentSubjects(c, r));
-
-                        /*
-                        await Execute(EcfTables.StudentSchoolClassAttendances, connection, async (c, r) => await ImportStudentSchoolClassAttendances(c, r));
-                        await Execute(EcfTables.StudentSubjects, connection, async (c, r) => await ImportStudentSubjects(c, r));
-                        */
+                        await Execute(EcfTables.StudentSubjects, connection, async (c, r) => await ImportStudentSubjects(c, r));                                                                    
                     }
                 }
                 finally
@@ -130,7 +116,7 @@ namespace Ecf.Magellan
             {
                 // Report status 
                 Console.WriteLine();
-                Console.WriteLine($"[Error] Extracting failed. Only {_tableCounter} table(s) and {_recordCounter} record(s) extracted");
+                Console.WriteLine($"[Error] Importing failed. Only {_tableCounter} table(s) and {_recordCounter} record(s) imported");
                 throw;
             }
         }
@@ -141,7 +127,7 @@ namespace Ecf.Magellan
             if (!File.Exists(sourceFile)) return;
 
             // Report status
-            Console.WriteLine($"[Extracting] [{csvTableName}] Start...");
+            Console.WriteLine($"[Importing] [{csvTableName}] Start...");
             
 
             // Init CSV file stream
@@ -167,7 +153,7 @@ namespace Ecf.Magellan
             _tableCounter++;
 
             // Report status
-            Console.WriteLine($"[Extracting] [{csvTableName}] {ecfRecordCounter} record(s) extracted");
+            Console.WriteLine($"[Importing] [{csvTableName}] {ecfRecordCounter} record(s) imported");
         }
 
 
@@ -201,52 +187,57 @@ namespace Ecf.Magellan
 
         private async Task<int> ImportSchoolClasses(FbConnection fbConnection, EcfTableReader ecfTableReader)
         {
+            static async void InsertSchoolClassAndTerm(FbConnection fbConnection, EcfTableReader ecfTableReader, int tenantId, int schoolTermId, string classTermId)
+            {
+                DbResult SchoolClassResult = await RecordInsert.SchoolClass(fbConnection, ecfTableReader, tenantId);
+                if (SchoolClassResult.Success)
+                {
+                    await RecordInsert.SchoolClassTerm(fbConnection, tenantId, (int)SchoolClassResult.Value, schoolTermId, classTermId);
+                }
+                else
+                {
+                    Console.WriteLine("[ERROR] [SchoolClass] could not be inserted");
+                }
+            }
+
             var recordCounter = 0;
 
             while (ecfTableReader.ReadAsync().Result > 0)
             {
                 // read needed field-values
                 var schoolTermId = ecfTableReader.GetValue<string>("SchoolTermId");
-                var schoolClassesId = ecfTableReader.GetValue<string>("Id");
+                var schoolTerm = _schoolTerms.Find(t => t.EcfId.Equals(schoolTermId));
 
-                if (Helper.GetSchoolTermParts(schoolTermId, out string validFrom, out string validTo))
-                {
-                    DbResult schoolTermResult = await RecordExists.SchoolTerm(fbConnection, validFrom, validTo);
-
-                    if (schoolTermResult.Success)
+                var schoolClassesId = ecfTableReader.GetValue<string>("FederationId");
+                var classTermId = ecfTableReader.GetValue<string>("Id");
+                
+                if (schoolTerm != null)
+                {                     
+                    DbResult SchoolClassResult = await RecordExists.SchoolClass(fbConnection, _tenantId, schoolClassesId);
+                    if (SchoolClassResult.Success)
                     {
-                        DbResult SchoolClassTermResult = await RecordExists.SchoolClassTerm(fbConnection, _tenantId, (int)schoolTermResult.Value, schoolClassesId);
-                        if (SchoolClassTermResult.Success)
-                        {
-                            // UPDATE
-                            await RecordUpdate.SchoolClass(fbConnection, ecfTableReader, _tenantId, schoolClassesId);
-                        } else
-                        {
-                            // INSERT
+                        // UPDATE                            
+                        await RecordUpdate.SchoolClass(fbConnection, ecfTableReader, _tenantId, (int)SchoolClassResult.Value);
 
-                            DbResult SchoolClassResult = await RecordInsert.SchoolClass(fbConnection, ecfTableReader, _tenantId);
-
-                            if (SchoolClassResult.Success)
-                            {
-                                await RecordInsert.SchoolClassTerm(fbConnection, _tenantId, (int)SchoolClassResult.Value, (int)schoolTermResult.Value);
-                            }
-                            else
-                            {
-                                Console.WriteLine("[ERROR] [SchoolClass] could not be inserted");
-                            }
+                        DbResult SchoolClassTermResult = await RecordExists.SchoolClassTerm(fbConnection, _tenantId, classTermId);
+                        if (!SchoolClassTermResult.Success)
+                        {
+                            // INSERT SchoolClassTerm
+                            await RecordInsert.SchoolClassTerm(fbConnection, _tenantId, (int)SchoolClassResult.Value, schoolTerm.MagellanId, classTermId);
                         }
-                    } else
+                    } 
+                    else
                     {
-                        Console.WriteLine("[ERROR] [SchoolTerm] FROM [SchoolClasses] could not be found");
+                        // INSERT                           
+                        InsertSchoolClassAndTerm(fbConnection, ecfTableReader, _tenantId, schoolTerm.MagellanId, classTermId);
                     }
-                    
+
                     recordCounter += 1;
                 }
                 else
                 {
-                    Console.WriteLine("[ERROR] reading [SchoolTerms] FROM [SchoolClasses]");
-                }
-
+                    Console.WriteLine("[ERROR] [SchoolTerm] FROM [SchoolClasses] could not be found");
+                }                
             }
 
             return await Task.FromResult(recordCounter);
@@ -259,6 +250,7 @@ namespace Ecf.Magellan
             while (ecfTableReader.ReadAsync().Result > 0)
             {
                 // read needed field-values
+                var ecfId = ecfTableReader.GetValue<string>("Id");
                 var validFrom = ecfTableReader.GetValue<string>("ValidFrom");
                 var validTo = ecfTableReader.GetValue<string>("ValidTo");                
                 
@@ -267,11 +259,16 @@ namespace Ecf.Magellan
                 if (dbResult.Success)
                 {
                     // UPDATE
+                    _schoolTerms.Add(new SimpleCache(ecfId, (int)dbResult.Value));
                     await RecordUpdate.SchoolTerm(fbConnection, ecfTableReader, (int)dbResult.Value);
                 } else
                 {
                     // INSERT
-                    await RecordInsert.SchoolTerm(fbConnection, ecfTableReader);
+                    dbResult = await RecordInsert.SchoolTerm(fbConnection, ecfTableReader);
+                    if (dbResult.Success)
+                    {
+                        _schoolTerms.Add(new SimpleCache(ecfId, (int)dbResult.Value));
+                    }
                 }
                 
                 recordCounter += 1;
@@ -288,21 +285,29 @@ namespace Ecf.Magellan
             {
                 // read needed field-values
                 var ecfId = ecfTableReader.GetValue<string>("Id");
+                int studentId = -1;
 
                 DbResult dbResult = await RecordExists.ByGuidExtern(fbConnection, MappingTables.Map(_currentCsv), _tenantId, ecfId);
 
                 if (dbResult.Success)
                 {
                     // UPDATE
-                    await RecordUpdate.Student(fbConnection, ecfTableReader, _tenantId, (int)dbResult.Value);
+                    studentId = (int)dbResult.Value;
+                    await RecordUpdate.Student(fbConnection, ecfTableReader, _tenantId, studentId);
+                    
                 }
                 else
                 {
                     // INSERT
-                    await RecordInsert.Student(fbConnection, ecfTableReader, _tenantId);
+                    dbResult = await RecordInsert.Student(fbConnection, ecfTableReader, _tenantId);
+                    if (dbResult.Success) studentId = (int)dbResult.Value;                                       
                 }
 
-                recordCounter += 1;
+                if (studentId > 0)
+                {
+                    _students.Add(new Students(ecfId, studentId));
+                    recordCounter += 1;
+                }
             }
 
             return await Task.FromResult(recordCounter);
@@ -313,36 +318,43 @@ namespace Ecf.Magellan
             var recordCounter = 0;
 
             while (ecfTableReader.ReadAsync().Result > 0)
-            {
-                // read needed field-values
+            {                
                 var studentId = ecfTableReader.GetValue<string>("StudentId");
+                var student = _students.Find(s => s.EcfId.Equals(studentId));
+                
                 var custodianId = ecfTableReader.GetValue<string>("CustodianId");
-
-                DbResult studentResult = await RecordExists.ByGuidExtern(fbConnection, MappingTables.Map("Students"), _tenantId, studentId);
-                DbResult custodianResult = await RecordExists.ByGuidExtern(fbConnection, MappingTables.Map("Custodians"), _tenantId, custodianId);
-
-                if (studentResult.Success && custodianResult.Success)
+                
+                if (student != null)
                 {
-                    DbResult dbResult = await RecordExists.StudentCustodian(fbConnection, _tenantId, (int)studentResult.Value, (int)custodianResult.Value);
+                    DbResult custodianResult = await RecordExists.ByGuidExtern(fbConnection, MappingTables.Map("Custodians"), _tenantId, custodianId);
 
-                    if (dbResult.Success)
+                    if (custodianResult.Success)
                     {
-                        // UPDATE
-                        await RecordUpdate.StudentCustodian(fbConnection, ecfTableReader, _tenantId, (int)dbResult.Value);
+                        DbResult dbResult = await RecordExists.StudentCustodian(fbConnection, _tenantId, student.MagellanId, (int)custodianResult.Value);
+
+                        if (dbResult.Success)
+                        {
+                            // UPDATE
+                            await RecordUpdate.StudentCustodian(fbConnection, ecfTableReader, _tenantId, (int)dbResult.Value);
+                        }
+                        else
+                        {
+                            // INSERT
+                            await RecordInsert.StudentCustodian(fbConnection, ecfTableReader, _tenantId, student.MagellanId, (int)custodianResult.Value);
+                        }
+
+                        recordCounter += 1;
                     }
                     else
                     {
-                        // INSERT
-                        await RecordInsert.StudentCustodian(fbConnection, ecfTableReader, _tenantId, (int)studentResult.Value, (int)custodianResult.Value);
+                        // MESSAGE
+                        Console.WriteLine($"[StudentCustodians] [Sorgeberechtigte ({custodianId})] nicht gefunden");
                     }
-                }
-                else
+                } else
                 {
                     // MESSAGE
-                    Console.WriteLine($"[StudentCustodians] [Schueler/Sorgeberechtigte] nicht gefunden");
-                }
-
-                recordCounter += 1;
+                    Console.WriteLine($"[StudentCustodians] [Schueler ({studentId})] nicht gefunden");
+                }                
             }
 
             return await Task.FromResult(recordCounter);
@@ -357,31 +369,29 @@ namespace Ecf.Magellan
             {
                 // read needed field-values
                 var studentId = ecfTableReader.GetValue<string>("StudentId");
+                var student = _students.Find(s => s.EcfId.Equals(studentId));
                 var languageId = ecfTableReader.GetValue<string>("LanguageId");
 
-                DbResult dbResult = await RecordExists.ByGuidExtern(fbConnection, MappingTables.Map(_currentCsv), _tenantId, studentId);
-
-                if (dbResult.Success)
+                if (student != null)
                 {
                     DbResult ForeignLanguageResult = await Helper.GetSubject(fbConnection, subjects, languageId);
 
                     if (ForeignLanguageResult.Success)
                     {
                         // UPDATE
-                        await RecordUpdate.StudentForeignLanguage(fbConnection, ecfTableReader, _tenantId, (int)dbResult.Value, (int)ForeignLanguageResult.Value);
+                        var success = await RecordUpdate.StudentForeignLanguage(fbConnection, ecfTableReader, _tenantId, student.MagellanId, (int)ForeignLanguageResult.Value);
+                        if (success) recordCounter += 1;
                     } else
                     {
                         // MESSAGE
-                        Console.WriteLine($"[StudenForeignLanguages] [ForeignLanguage] nicht gefunden");
+                        Console.WriteLine($"[StudenForeignLanguages] [Fremdsprache/Fach ({languageId})] nicht gefunden");
                     }                    
                 }
                 else
                 {
                     // MESSAGE
-                    Console.WriteLine($"[StudenForeignLanguages] [Schueler] nicht gefunden");
-                }
-
-                recordCounter += 1;
+                    Console.WriteLine($"[StudenForeignLanguages] [Schueler ({studentId})] nicht gefunden");
+                }                
             }
 
             return await Task.FromResult(recordCounter);
@@ -392,41 +402,50 @@ namespace Ecf.Magellan
             var recordCounter = 0;            
 
             // Caches records for further processing and processes it
-            Helper.ProcessStudents(ecfTableReader, _students);
+            Helper.ProcessStudents(ecfTableReader, _students, _schoolTerms);
 
             // Find existing MagellanIds that are needed to create a student career
-            Helper.SetMagellanIds(fbConnection, _tenantId, _students);
+            Helper.SetMagellanIds(fbConnection, _tenantId, _students, _schoolTerms);
 
             foreach (var student in _students)
             {
-                if (student.ValidateForCareer(out string wrongValues))
+                if (student.MagellanId > 0)
                 {
                     foreach (var career in student.Career)
                     {
-                        DbResult dbResult = await RecordInsert.StudentSchoolClassAttendance(fbConnection, _tenantId, student.MagellanId, career);
-                        if (dbResult.Success)
+                        if (career.Validate(false, out string wrongValues))
                         {
-                            int StudentTermId = (int)dbResult.Value;
-
-                            var success = await RecordInsert.SchuelerKlassen(fbConnection, _tenantId, StudentTermId, career.EcfValues.Status);
-                            if (success)
+                            if (career.MagellanValues.StudentTermId < 1)
                             {
-                                if (await RecordUpdate.StudentStatus(fbConnection, _tenantId, student.MagellanId, 3))
+                                DbResult dbResult = await RecordInsert.StudentSchoolClassAttendance(fbConnection, _tenantId, student.MagellanId, career);
+                                if (dbResult.Success)
                                 {
-                                    career.MagellanValues.StudentTermId = StudentTermId;
-                                    recordCounter += 1;
+                                    int StudentTermId = (int)dbResult.Value;
+
+                                    var success = await RecordInsert.SchuelerKlassen(fbConnection, _tenantId, StudentTermId, career.EcfValues.Status);
+                                    if (success)
+                                    {
+                                        if (await RecordUpdate.StudentStatus(fbConnection, _tenantId, student.MagellanId, 3))
+                                        {
+                                            career.MagellanValues.StudentTermId = StudentTermId;                                            
+                                        }
+                                    }
                                 }
                             }
+                            
+                            recordCounter += 1;
                         }
+                        else
+                        {
+                            // MESSAGE
+                            Console.WriteLine($"[StudentSchoolAttendances] [Laufbahn] des Schülers {career.EcfValues.Id} nicht korrekt.\nFolgende Felder sind fehlerhaft: {wrongValues}");
+                        }                        
                     }
                 }
                 else
                 {
                     // MESSAGE
-                    if (student.MagellanId == 0)
-                        Console.WriteLine($"[StudentSchoolAttendances] [Schüler] {student.EcfId} wurde nicht gefunden.");
-                    else
-                        Console.WriteLine($"[StudentSchoolAttendances] [Laufbahn] des Schülers {student.EcfId} nicht korrekt.\nFolgende Felder sind fehlerhaft: {wrongValues}");
+                    Console.WriteLine($"[StudentSchoolAttendances] [Schüler] {student.EcfId} wurde nicht gefunden.");                    
                 }
             }
 
@@ -436,61 +455,57 @@ namespace Ecf.Magellan
         private async Task<int> ImportStudentSubjects(FbConnection fbConnection, EcfTableReader ecfTableReader)
         {
             var recordCounter = 0;
+
+            // Enhance existing cashed records with student subjects values
+            Helper.AddStudentsSubjects(ecfTableReader, _students, _schoolTerms);
+
+            //Find existing MagellanIds for the new student subjects values
+            Helper.AddMagellanSubjectIds(fbConnection, _tenantId, _students);
             
-            if (_students.Count == 0)
-            {
-                // Caches records for further processing and processes it; If not cashed before
-                Helper.ProcessStudentsSubjects(ecfTableReader, _students);
-
-                // Find existing MagellanIds that are needed to create StudentSubjects
-                Helper.SetMagellanSubjectIds(fbConnection, _tenantId, _students);                
-            } else
-            {
-                // Enhance existing cashed records with student subjects values
-                Helper.AddStudentsSubjects(ecfTableReader, _students);
-
-                //Find existing MagellanIds for the new student subjects values
-                Helper.AddMagellanSubjectIds(fbConnection, _tenantId, _students);
-            }
-
             foreach (var student in _students)
             {
-                if (student.ValidateForStudentSubjects(out string missingValues))
+                if (student.MagellanId > 0)
                 {
                     foreach (var career in student.Career)
                     {
-                        foreach (var studentSubject in career.StudentSubjects)
+                        if (career.Validate(true, out string wrongValues))
                         {
-                            if (studentSubject.MagellanValues.SubjectId > 0)
+                            foreach (var studentSubject in career.StudentSubjects)
                             {
-                                DbResult dbResult = await RecordExists.StudentSubject(fbConnection, _tenantId, career.MagellanValues.StudentTermId, studentSubject);
-                                if (dbResult.Success)
+                                if (studentSubject.MagellanValues.SubjectId > 0)
                                 {
-                                    // UPDATE
-                                    await RecordUpdate.StudentSubject(fbConnection, _tenantId, (int)dbResult.Value, studentSubject);
+                                    DbResult dbResult = await RecordExists.StudentSubject(fbConnection, _tenantId, career.MagellanValues.StudentTermId, studentSubject);
+                                    if (dbResult.Success)
+                                    {
+                                        // UPDATE
+                                        await RecordUpdate.StudentSubject(fbConnection, _tenantId, (int)dbResult.Value, studentSubject);
+                                    }
+                                    else
+                                    {
+                                        // INSERT
+                                        await RecordInsert.StudentSubject(fbConnection, _tenantId, student.MagellanId, career, studentSubject);
+                                    }
+                                    
+                                    recordCounter += 1;
                                 }
                                 else
                                 {
-                                    // INSERT
-                                    await RecordInsert.StudentSubject(fbConnection, _tenantId, student.MagellanId, career, studentSubject);
+                                    // MESSAGE
+                                    Console.WriteLine($"[StudentSubjects] [Fach ({studentSubject.EcfValues.SubjectId})] nicht korrekt. ");
                                 }
-
-                                recordCounter += 1;
-                            } else
-                            {
-                                // MESSAGE
-                                Console.WriteLine($"[StudentSubjects] [Fach] <{studentSubject.EcfValues.SubjectId}> nicht korrekt. ");
                             }
-                        }                        
+                        }
+                        else
+                        {
+                            // MESSAGE                    
+                            Console.WriteLine($"[StudentSubjects] [Laufbahn ({career.EcfValues.Id})] des Schülers ({student.EcfId}) nicht korrekt. Folgende Felder sind fehlerhaft: {wrongValues}");
+                        }
                     }
                 }
                 else
                 {
-                    // MESSAGE
-                    if (student.MagellanId == 0)
-                        Console.WriteLine($"[StudentSubjects] [Schüler] <{student.EcfId}> wurde nicht gefunden.");
-                    else
-                        Console.WriteLine($"[StudentSubjects] [Laufbahn] des Schülers <{student.EcfId}> nicht korrekt. Folgende Felder sind fehlerhaft: {missingValues}");                    
+                    // MESSAGE                    
+                    Console.WriteLine($"[StudentSubjects] [Schüler ({student.EcfId})] wurde nicht gefunden.");                    
                 }
             }
 
@@ -502,11 +517,10 @@ namespace Ecf.Magellan
             var recordCounter = 0;
 
             while (ecfTableReader.ReadAsync().Result > 0)
-            {
-                // read needed field-values
+            {                
                 var ecfId = ecfTableReader.GetValue<string>("Id");
+                
                 DbResult dbResult = await RecordExists.Subject(fbConnection, _tenantId, ecfId);
-
                 if (dbResult.Success)
                 {
                     // UPDATE
@@ -515,10 +529,10 @@ namespace Ecf.Magellan
                 else
                 {
                     // INSERT
-                    
-                    object category = null;
-                    if (_currentCsv == "ForeignLanguages") category = 0;
 
+                    object category = null;
+                    if (_currentCsv == "ForeignLanguages" ) category = 0;
+                    
                     await RecordInsert.Subject(fbConnection, ecfTableReader, _tenantId, category);
                 }
 
@@ -559,8 +573,7 @@ namespace Ecf.Magellan
             var recordCounter = 0;
 
             while (ecfTableReader.ReadAsync().Result > 0)
-            {
-                // read needed field-values
+            {                
                 var ecfId = ecfTableReader.GetValue<string>("Id");
                 DbResult dbResult;
 
@@ -572,7 +585,6 @@ namespace Ecf.Magellan
                 if (dbResult.Success)
                 {
                     // UPDATE                   
-
                     switch (_currentCsv)
                     {
                         case EcfTables.AchievementTypes:
@@ -585,14 +597,13 @@ namespace Ecf.Magellan
 
                         default:
                             // CourseTypes, NativeLanguages
-                            await RecordUpdate.TokenCatalog(fbConnection, ecfTableReader, ecfId);
+                            await RecordUpdate.TokenCatalog(fbConnection, ecfTableReader, MappingTables.Map(_currentCsv));
                             break;
                     }               
                 }
                 else
                 {
                     // INSERT
-
                     switch (_currentCsv)
                     {
                         case EcfTables.AchievementTypes:

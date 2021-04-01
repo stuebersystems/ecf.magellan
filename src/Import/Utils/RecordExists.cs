@@ -125,22 +125,20 @@ namespace Ecf.Magellan
             return new DbResult(false, -1); ;
         }
 
-        public static async Task<DbResult> SchoolClassTerm(FbConnection fbConnection, int tenantId, int schoolTermId, string schoolClassId)
+        public static async Task<DbResult> SchoolClass(FbConnection fbConnection, int tenantId, string schoolClassId)
         {
             Guid guidExtern = GuidFactory.Create(GuidFactory.DnsNamespace, schoolClassId);
 
             string sql =
-                "SELECT \"KlassenZeitraumID\" FROM \"KlassenAnsicht\" " +
+                "SELECT \"ID\" FROM \"Klassen\" " +
                 "WHERE " +
-                "  \"Mandant\" = @TenantId AND " +
-                "  \"Zeitraum\" = @SchoolTermId AND " +
+                "  \"Mandant\" = @TenantId AND " +               
                 "  \"GUIDExtern\" = @GUIDExtern";
 
             using var fbTransaction = fbConnection.BeginTransaction();
             using var fbCommand = new FbCommand(sql, fbConnection, fbTransaction);
 
-            Helper.SetParamValue(fbCommand, "@TenantId", FbDbType.BigInt, tenantId);
-            Helper.SetParamValue(fbCommand, "@SchoolTermId", FbDbType.BigInt, schoolTermId);
+            Helper.SetParamValue(fbCommand, "@TenantId", FbDbType.BigInt, tenantId);            
             Helper.SetParamValue(fbCommand, "@GUIDExtern", FbDbType.VarChar, guidExtern);
 
             var sqlReader = await fbCommand.ExecuteReaderAsync();
@@ -150,7 +148,71 @@ namespace Ecf.Magellan
             while (sqlReader.Read())
             {
                 // do things                                
-                id = (int)sqlReader["KlassenZeitraumID"];
+                id = (int)sqlReader["ID"];
+                numberOfRecords++;
+            }
+
+            if (numberOfRecords == 1) return new DbResult(true, id);
+
+            return new DbResult(false, -1);
+        }
+
+        public static async Task<DbResult> SchoolClassByTerm(FbConnection fbConnection, int tenantId, string classTermId)
+        {
+            Guid guidExtern = GuidFactory.Create(GuidFactory.DnsNamespace, classTermId);
+
+            string sql =
+                "SELECT \"Klasse\" FROM \"KlassenZeitraeume\" " +
+                "WHERE " +
+                "  \"Mandant\" = @TenantId AND " +                
+                "  \"GUIDExtern\" = @GUIDExtern";
+
+            using var fbTransaction = fbConnection.BeginTransaction();
+            using var fbCommand = new FbCommand(sql, fbConnection, fbTransaction);
+
+            Helper.SetParamValue(fbCommand, "@TenantId", FbDbType.BigInt, tenantId);            
+            Helper.SetParamValue(fbCommand, "@GUIDExtern", FbDbType.VarChar, guidExtern);
+
+            var sqlReader = await fbCommand.ExecuteReaderAsync();
+            var id = -1;
+            var numberOfRecords = 0;
+
+            while (sqlReader.Read())
+            {
+                // do things                                
+                id = (int)sqlReader["Klasse"];
+                numberOfRecords++;
+            }
+
+            if (numberOfRecords == 1) return new DbResult(true, id);
+
+            return new DbResult(false, -1);
+        }
+
+        public static async Task<DbResult> SchoolClassTerm(FbConnection fbConnection, int tenantId, string classTermId)
+        {
+            Guid guidExtern = GuidFactory.Create(GuidFactory.DnsNamespace, classTermId);
+
+            string sql =
+                "SELECT \"ID\" FROM \"KlassenZeitraeume\" " +
+                "WHERE " +
+                "  \"Mandant\" = @TenantId AND " +                
+                "  \"GUIDExtern\" = @GUIDExtern";
+
+            using var fbTransaction = fbConnection.BeginTransaction();
+            using var fbCommand = new FbCommand(sql, fbConnection, fbTransaction);
+
+            Helper.SetParamValue(fbCommand, "@TenantId", FbDbType.BigInt, tenantId);            
+            Helper.SetParamValue(fbCommand, "@GUIDExtern", FbDbType.VarChar, guidExtern);
+
+            var sqlReader = await fbCommand.ExecuteReaderAsync();
+            var id = -1;
+            var numberOfRecords = 0;
+
+            while (sqlReader.Read())
+            {
+                // do things                                
+                id = (int)sqlReader["ID"];
                 numberOfRecords++;
             }
 
