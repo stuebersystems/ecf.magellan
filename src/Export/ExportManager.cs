@@ -25,7 +25,6 @@ using FirebirdSql.Data.FirebirdClient;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -36,9 +35,9 @@ namespace Ecf.Magellan
     {
         private readonly int _schoolTermId;
         private readonly int _tenantId;
-        private int _version = 0;
         private int _recordCounter = 0;
         private int _tableCounter = 0;
+        private int _version = 0;
 
         public ExportManager(
             Configuration config,
@@ -131,7 +130,7 @@ namespace Ecf.Magellan
                 var ecfTablefWriter = new EcfTableWriter(csvWriter);
                 
                 if (_version < 7)
-                    {
+                {
                     ecfTablefWriter.AddConverter<object>(new CsvWin1251Converter());
                 }
 
@@ -776,17 +775,21 @@ namespace Ecf.Magellan
 
             using var reader = await fbCommand.ExecuteReaderAsync();
 
-            var version = reader.GetInt32(reader.GetOrdinal("Release"));
+            if (await reader.ReadAsync())
+            {
+                var version = reader.GetInt32(reader.GetOrdinal("Release"));
 
-            if (version >= 800) 
-                return 8;
+                if (version >= 800)
+                    return 8;
+                else if (version >= 700)
+                    return 7;
+                else
+                    return 6;
+            }
             else
-            if (version >= 700) 
-                return 7;
-            else
+            {
                 return 6;
-            
-            
+            }
         }    
     }
 }
