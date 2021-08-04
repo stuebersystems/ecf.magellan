@@ -18,7 +18,7 @@ namespace Ecf.Magellan
                 {EcfTables.Custodians, MagellanTables.Custodians},
                 {EcfTables.ForeignLanguages, MagellanTables.Subjects},
                 {EcfTables.GradeValues, MagellanTables.GradeValues},
-                {EcfTables.NativeLanguages, MagellanTables.NativeLanguages},
+                {EcfTables.Languages, MagellanTables.NativeLanguages},
                 {EcfTables.SchoolClasses, MagellanTables.SchoolClasses},
                 {EcfTables.SchoolTerms, MagellanTables.SchoolTerms},
                 {EcfTables.Students, MagellanTables.Students},

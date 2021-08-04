@@ -359,8 +359,8 @@ namespace Ecf.Magellan
                 Helper.SetParamValue(fbCommand, "@Locality", FbDbType.VarChar, ecfTableReader.GetValue<string>("Locality"));                
                 Helper.SetParamValue(fbCommand, "@Email", FbDbType.VarChar, ecfTableReader.GetValue<string>("Email"));
                 Helper.SetParamValue(fbCommand, "@HomePhoneNumber", FbDbType.VarChar, ecfTableReader.GetValue<string>("HomePhoneNumber"));
-                Helper.SetParamValue(fbCommand, "@Nationality1", FbDbType.VarChar, ecfTableReader.GetValue<string>("Nationality1"));
-                Helper.SetParamValue(fbCommand, "@Nationality2", FbDbType.VarChar, ecfTableReader.GetValue<string>("Nationality2"));
+                Helper.SetParamValue(fbCommand, "@Nationality1", FbDbType.VarChar, ecfTableReader.GetValue<string>("Nationality1Id"));
+                Helper.SetParamValue(fbCommand, "@Nationality2", FbDbType.VarChar, ecfTableReader.GetValue<string>("Nationality2Id"));
 
                 FbParameter IdParam = fbCommand.Parameters.Add("@Id", FbDbType.Integer, Int32.MaxValue, "ID");
                 IdParam.Direction = ParameterDirection.Output;

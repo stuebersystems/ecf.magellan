@@ -87,7 +87,7 @@ namespace Ecf.Magellan
                         // do not import, not needed: GradeSystems                       
                         
                         await Execute(EcfTables.GradeValues, connection, async (c, r) => await ImportTokenCatalog(c, r));
-                        await Execute(EcfTables.NativeLanguages, connection, async (c, r) => await ImportTokenCatalog(c, r)); 
+                        await Execute(EcfTables.Languages, connection, async (c, r) => await ImportTokenCatalog(c, r)); 
                         
                         // do not import, not needed: StudentSchoolClassAttendanceStatus
                         
@@ -136,12 +136,9 @@ namespace Ecf.Magellan
             // Init CSV Reader
             using var csvReader = new CsvReader(csvfileStream, Encoding.UTF8);
 
-            // Read headline
-            var strHeaders = await csvReader.ReadLineAsync();
-            CsvHeaders csvHeader = new CsvHeaders(strHeaders);
-
             // Init ECF Reader
-            var ecfTableReader = new EcfTableReader(csvReader, csvHeader);
+            var ecfTableReader = new EcfTableReader(csvReader);
+            await ecfTableReader.ReadHeadersAsync();
 
             _currentCsv = csvTableName;
 

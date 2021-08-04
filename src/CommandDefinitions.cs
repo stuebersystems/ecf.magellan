@@ -31,9 +31,8 @@ namespace Ecf.Magellan
         {
             var command = new Command("export", "Exports data from a MAGELLAN database to ECF files")
             {
-                new Option(new[] { "--config", "-c" }, "Path to existing JSON configuration file")
+                new Option<FileInfo>(new[] { "--config", "-c" }, "Path to existing JSON configuration file")
                 {
-                    Argument = new Argument<FileInfo>(),
                     IsRequired = true
                 },
             };
@@ -48,9 +47,8 @@ namespace Ecf.Magellan
         {
             var command = new Command("import", "Imports data from ECF files to a MAGELLAN database ")
             {
-                new Option(new[] { "--config", "-c" }, "Path to existing JSON configuration file")
+                new Option<FileInfo>(new[] { "--config", "-c" }, "Path to existing JSON configuration file")
                 {
-                    Argument = new Argument<FileInfo>(),
                     IsRequired = true
                 },
             };
