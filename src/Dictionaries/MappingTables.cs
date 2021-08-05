@@ -13,7 +13,7 @@ namespace Ecf.Magellan
         {
             _mappings = new Dictionary<string, string>()
             {
-                { EcfTables.AchievementTypes, MagellanTables.AchievementTypes },
+                {EcfTables.AchievementTypes, MagellanTables.AchievementTypes},
                 {EcfTables.CourseTypes, MagellanTables.CourseTypes},
                 {EcfTables.Custodians, MagellanTables.Custodians},
                 {EcfTables.ForeignLanguages, MagellanTables.Subjects},

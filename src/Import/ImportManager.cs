@@ -72,9 +72,11 @@ namespace Ecf.Magellan
 
                     // processes every found import file in given dependency order
                     if (ecfFiles.Length > 0)
-                    {                                                 
+                    {
                         // SchoolTerms, only if not given by configuration
-                        if (_schoolTermId < 1) await Execute(EcfTables.SchoolTerms, connection, async (c, r) => await ImportSchoolTerms(c, r));                        
+                        if (_schoolTermId < 1)
+                            { await Execute(EcfTables.SchoolTerms, connection, async (c, r) => await ImportSchoolTerms(c, r)); } else
+                            { await AddSchoolTerm(); } 
                          
                         // Catalogs
                         await Execute(EcfTables.AchievementTypes, connection, async (c, r) => await ImportTokenCatalog(c, r));
@@ -156,6 +158,13 @@ namespace Ecf.Magellan
             Console.WriteLine($"[Importing] [{csvTableName}] {ecfRecordCounter} record(s) imported");
         }
 
+        private async Task AddSchoolTerm()
+        {
+            _schoolTerms.Add(new SimpleCache("2021-2", _schoolTermId));
+
+            await Task.CompletedTask;
+        }
+
 
         private async Task<int> ImportCustodians(FbConnection fbConnection, EcfTableReader ecfTableReader)
         {
@@ -192,7 +201,7 @@ namespace Ecf.Magellan
                 DbResult SchoolClassResult = await RecordInsert.SchoolClass(fbConnection, ecfTableReader, tenantId);
                 if (SchoolClassResult.Success)
                 {
-                    await RecordInsert.SchoolClassTerm(fbConnection, tenantId, (int)SchoolClassResult.Value, schoolTermId, classTermId);
+                    await RecordInsert.SchoolClassTerm(fbConnection, tenantId, (int)SchoolClassResult.Value, schoolTermId, classTermId, ecfTableReader);
                 }
                 else
                 {
@@ -204,9 +213,17 @@ namespace Ecf.Magellan
 
             while (ecfTableReader.ReadAsync().Result > 0)
             {
-                // read needed field-values
-                var schoolTermId = ecfTableReader.GetValue<string>("SchoolTermId");
-                var schoolTerm = _schoolTerms.Find(t => t.EcfId.Equals(schoolTermId));
+                // read needed field-values                                
+                SimpleCache schoolTerm;
+
+                if (_schoolTermId > 0)
+                {                    
+                    schoolTerm = _schoolTerms.Find(t => t.MagellanId.Equals(_schoolTermId));
+                } else
+                {
+                    var schoolTermId = ecfTableReader.GetValue<string>("SchoolTermId");
+                    schoolTerm = _schoolTerms.Find(t => t.EcfId.Equals(schoolTermId));
+                }
 
                 var schoolClassesId = ecfTableReader.GetValue<string>("FederationId");
                 var classTermId = ecfTableReader.GetValue<string>("Id");
@@ -223,7 +240,9 @@ namespace Ecf.Magellan
                         if (!SchoolClassTermResult.Success)
                         {
                             // INSERT SchoolClassTerm
-                            await RecordInsert.SchoolClassTerm(fbConnection, _tenantId, (int)SchoolClassResult.Value, schoolTerm.MagellanId, classTermId);
+                            await RecordInsert.SchoolClassTerm(
+                                fbConnection, _tenantId, (int)SchoolClassResult.Value, schoolTerm.MagellanId, classTermId,
+                                ecfTableReader);
                         }
                     } 
                     else
