@@ -380,8 +380,8 @@ namespace Ecf.Magellan
                 Helper.SetParamValue(fbCommand, "@Email", FbDbType.VarChar, ecfTableReader.GetValue<string>("Email"));
                 Helper.SetParamValue(fbCommand, "@HomePhoneNumber", FbDbType.VarChar, ecfTableReader.GetValue<string>("HomePhoneNumber"));
                 Helper.SetParamValue(fbCommand, "@MobileNumber", FbDbType.VarChar, ecfTableReader.GetValue<string>("MobileNumber"));
-                Helper.SetParamValue(fbCommand, "@Nationality1", FbDbType.VarChar, ecfTableReader.GetValue<string>("Nationality1"));
-                Helper.SetParamValue(fbCommand, "@Nationality2", FbDbType.VarChar, ecfTableReader.GetValue<string>("Nationality2"));
+                Helper.SetParamValue(fbCommand, "@Nationality1", FbDbType.VarChar, ecfTableReader.GetValue<string>("Nationality1Id"));
+                Helper.SetParamValue(fbCommand, "@Nationality2", FbDbType.VarChar, ecfTableReader.GetValue<string>("Nationality2Id"));
                 Helper.SetParamValue(fbCommand, "@NativeLanguage", FbDbType.VarChar, ecfTableReader.GetValue<string>("NativeLanguage"));
                 Helper.SetParamValue(fbCommand, "@Religion", FbDbType.VarChar, ecfTableReader.GetValue<string>("ReligionId"));
                 Helper.SetParamValue(fbCommand, "@HealthInsuranceProvider", FbDbType.VarChar, ecfTableReader.GetValue<string>("HealthInsuranceProvider"));
