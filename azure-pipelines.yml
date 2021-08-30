@@ -3,7 +3,7 @@ pool:
   vmImage: 'windows-2019'
 
 variables:
-- group: 'nuget-package-config'
+- group: 'dotnet-config'
 - group: 'github-config'
 
 steps:
@@ -39,6 +39,10 @@ steps:
     packageType: sdk
     version: 3.x
     installationPath: $(Agent.ToolsDirectory)/dotnet
+- task: NuGetToolInstaller@1
+  displayName: 'Install NuGet Client'
+  inputs:
+    versionSpec: '5.11.0'
 - task: DotNetCoreCLI@2
   displayName: 'Build'
   inputs:
