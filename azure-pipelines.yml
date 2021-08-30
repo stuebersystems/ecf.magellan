@@ -3,7 +3,7 @@ pool:
   vmImage: 'windows-2019'
 
 variables:
-- group: 'dotnet-config'
+- group: 'nuget-package-config'
 - group: 'github-config'
 
 steps:
