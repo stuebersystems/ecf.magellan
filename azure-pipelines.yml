@@ -39,10 +39,13 @@ steps:
     packageType: sdk
     version: 3.x
     installationPath: $(Agent.ToolsDirectory)/dotnet
-- task: NuGetToolInstaller@1
-  displayName: 'Install NuGet Client'
+- task: DotNetCoreCLI@2
+  displayName: 'Restore'
   inputs:
-    versionSpec: '5.11.0'
+    command: 'restore'
+    projects: '*.sln'
+    feedsToUse: 'select'
+    vstsFeed: 'b0890edd-bcca-4a1c-b63c-d22daf6e4407/24f47e68-5eca-4ba8-8ab3-905662347d75'
 - task: DotNetCoreCLI@2
   displayName: 'Build'
   inputs:
