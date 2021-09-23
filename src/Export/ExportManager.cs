@@ -472,19 +472,23 @@ namespace Ecf.Magellan
             if (_version >= 7)
             {
                 sql =
-                    $"select Z.*, K.\"Zugang\", K.\"Abgang\" from \"SchuelerZeitraeume\" as Z " +
+                    $"select Z.*, K.\"Zugang\", K.\"Abgang\" " +
+                    $"from \"SchuelerZeitraeume\" as Z " +
                     $"join \"SchuelerKlassen\" as K " +
-                    $"on Z.\"Mandant\" = K.\"Mandant\" and Z.\"ID\" = K.\"SchuelerZeitraumID\" " +
+                    $"on Z.\"ID\" = K.\"SchuelerZeitraumID\" " +
                     $"join \"Schueler\" as S " +
-                    $"on Z.\"Mandant\" = S.\"Mandant\" and Z.\"Schueler\" = S.\"ID\" " +
+                    $"on Z.\"Schueler\" = S.\"ID\" " +
                     $"where Z.\"Mandant\" = @tenantId and Z.\"Zeitraum\" = @schoolTermId and S.\"Status\" in (2, 3) and (S.\"IDIntern\" is NULL) " +
                     $"union all " +
-                    $"select Z.*, K.\"Zugang\", K.\"Abgang\" from \"SchuelerZeitraeume\" as Z " +
+                    $"select Z.*, K.\"Zugang\", K.\"Abgang\" " +
+                    $"from \"SchuelerZeitraeume\" as Z " +
                     $"join \"SchuelerKlassen\" as K " +
-                    $"on Z.\"Mandant\" = K.\"Mandant\" and Z.\"ID\" = K.\"SchuelerZeitraumID\" " +
+                    $"on Z.\"ID\" = K.\"SchuelerZeitraumID\" " +
                     $"join \"Schueler\" as S " +
-                    $"on Z.\"Mandant\" = S.\"Mandant\" and Z.\"Schueler\" = S.\"IDIntern\" " +
-                    $"where Z.\"Mandant\" = @tenantId and Z.\"Zeitraum\" = @schoolTermId and S.\"Status\" in (2, 3) and not (S.\"IDIntern\" is NULL)";
+                    $"on Z.\"Schueler\" = S.\"IDIntern\" " +
+                    $"join \"Schueler\" as I " +
+                    $"on I.\"ID\" = S.\"IDIntern\" " +
+                    $"where Z.\"Mandant\" = @tenantId and Z.\"Zeitraum\" = @schoolTermId and I.\"Status\" in (2, 3) and not (S.\"IDIntern\" is NULL)";
             }
             else
             {
@@ -547,27 +551,27 @@ namespace Ecf.Magellan
                     $"select F.\"ID\", F.\"Klasse\", S.\"ID\" as \"Schueler\", F.\"KursNr\", F.\"Unterrichtsart\", F.\"Fachstatus\", F.\"Fach\", " +
                     $"F.\"Niveau\", F.\"Schwerpunkt\", K.\"Zugang\", K.\"Abgang\", L.\"ID\" as \"Lehrer\" from \"SchuelerFachdaten\" as F " +
                     $"join \"SchuelerZeitraeume\" as Z " +
-                    $"on Z.\"Mandant\" = F.\"Mandant\" and Z.\"ID\" = F.\"SchuelerZeitraumID\" " +
+                    $"on Z.\"ID\" = F.\"SchuelerZeitraumID\" " +
                     $"join \"SchuelerKlassen\" as K " +
-                    $"on Z.\"Mandant\" = K.\"Mandant\" and Z.\"ID\" = K.\"SchuelerZeitraumID\" " +
+                    $"on Z.\"ID\" = K.\"SchuelerZeitraumID\" " +
                     $"join \"Schueler\" as S " +
-                    $"on Z.\"Mandant\" = S.\"Mandant\" and Z.\"Schueler\" = S.\"ID\" " +
+                    $"on Z.\"Schueler\" = S.\"ID\" " +
                     $"left join \"Lehrer\" as L " +
-                    $"on F.\"Mandant\" = L.\"Mandant\" and F.\"Lehrer\" = L.\"ID\" " +
+                    $"on F.\"Lehrer\" = L.\"ID\" " +
                     $"where Z.\"Mandant\" = @tenantId and Z.\"Zeitraum\" = @schoolTermId and S.\"Status\" in (2, 3) and (S.\"IDIntern\" is NULL) " +
                     $"union all " +
                     $"select F.\"ID\", F.\"Klasse\", S.\"IDIntern\" as \"Schueler\", F.\"KursNr\", F.\"Unterrichtsart\", F.\"Fachstatus\", F.\"Fach\", " +
                     $"F.\"Niveau\", F.\"Schwerpunkt\", K.\"Zugang\", K.\"Abgang\", L.\"ID\" as \"Lehrer\" from \"SchuelerFachdaten\" as F " +
                     $"join \"SchuelerZeitraeume\" as Z " +
-                    $"on Z.\"Mandant\" = F.\"Mandant\" and Z.\"ID\" = F.\"SchuelerZeitraumID\" " +
+                    $"on Z.\"ID\" = F.\"SchuelerZeitraumID\" " +
                     $"join \"SchuelerKlassen\" as K " +
-                    $"on Z.\"Mandant\" = K.\"Mandant\" and Z.\"ID\" = K.\"SchuelerZeitraumID\" " +
+                    $"on Z.\"ID\" = K.\"SchuelerZeitraumID\" " +
                     $"join \"Schueler\" as S " +
-                    $"on Z.\"Mandant\" = S.\"Mandant\" and Z.\"Schueler\" = S.\"IDIntern\" " +
+                    $"on Z.\"Schueler\" = S.\"IDIntern\" " +
                     $"join \"Schueler\" as I " +
-                    $"on I.\"Mandant\" = S.\"Mandant\" and I.\"ID\" = S.\"IDIntern\" " +
+                    $"on I.\"ID\" = S.\"IDIntern\" " +
                     $"left join \"Lehrer\" as L " +
-                    $"on F.\"Mandant\" = L.\"Mandant\" and F.\"Lehrer\" = L.\"ID\" and L.\"Status\" = 1 " +
+                    $"on F.\"Lehrer\" = L.\"ID\" and L.\"Status\" = 1 " +
                     $"where Z.\"Mandant\" = @tenantId and Z.\"Zeitraum\" = @schoolTermId and I.\"Status\" in (2, 3) and not (S.\"IDIntern\" is NULL)";
             }
             else
@@ -622,7 +626,7 @@ namespace Ecf.Magellan
                 ecfTableWriter.SetValue(EcfHeaders.Id, reader["ID"]);
                 ecfTableWriter.SetValue(EcfHeaders.SchoolClassId, reader["Klasse"]);
                 ecfTableWriter.SetValue(EcfHeaders.StudentId, reader["Schueler"]);
-                ecfTableWriter.SetValue(EcfHeaders.CourseNo, reader["KursNr"]);
+                ecfTableWriter.SetValue(EcfHeaders.CourseNo, reader.GetShortOrDefault("KursNr", 0));
                 ecfTableWriter.SetValue(EcfHeaders.CourseTypeId, reader["Unterrichtsart"]);
                 ecfTableWriter.SetValue(EcfHeaders.CourseCategoryId, reader["Fachstatus"]);
                 ecfTableWriter.SetValue(EcfHeaders.SubjectId, reader["Fach"]);
