@@ -40,6 +40,13 @@ steps:
     version: 3.x
     installationPath: $(Agent.ToolsDirectory)/dotnet
 - task: DotNetCoreCLI@2
+  displayName: 'Restore'
+  inputs:
+    command: 'restore'
+    projects: '*.sln'
+    feedsToUse: 'select'
+    vstsFeed: 'b0890edd-bcca-4a1c-b63c-d22daf6e4407/24f47e68-5eca-4ba8-8ab3-905662347d75'
+- task: DotNetCoreCLI@2
   displayName: 'Build'
   inputs:
     command: 'build'

@@ -39,6 +39,19 @@ namespace Ecf.Magellan
                     return 0;                    
             }
         }
+        public static string Notification(string value)
+        {
+            // Mögliche Werte in MAGELLAN: Immer, Nur im Notfall, Nie  
+
+            var result = String.Empty;
+            if (value == "Always") { result = "0"; }
+            else
+            if (value == "UrgentCasesOnly") { result = "1"; }
+            else
+            if (value == "Never") { result = "2"; }
+
+            return result;
+        }
 
         public static string Passfail(string value)
         {
@@ -54,6 +67,18 @@ namespace Ecf.Magellan
             if (value == "Failed")  { result = "F"; } else
             if (value == "NotUsed") { result = "N"; }
             
+            return result;
+        }
+
+        public static string Priority(string value)
+        {
+            // Mögliche Werte in MAGELLAN: Telefon privat, Telefon beruf, Mobil
+
+            var result = String.Empty;
+            if (value == "HomePhoneNumber") { result = "0"; } else
+            if (value == "OfficePhoneNumber") { result = "1"; } else
+            if (value == "MobileNumber") { result = "2"; }
+
             return result;
         }
 
@@ -123,5 +148,8 @@ namespace Ecf.Magellan
 
             return result;
         }
+
+
+
     }
 }

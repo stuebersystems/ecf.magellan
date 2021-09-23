@@ -69,9 +69,13 @@ namespace Ecf.Magellan
                     PrepareExportFolder();
 
                     // Catalogs
+                    await Execute(EcfTables.Countries, connection, async (c, w, h) => await ExportCatalog("Staaten", c, w, h));
                     await Execute(EcfTables.CourseCategories, connection, async (c, w, h) => await ExportCatalog("Fachstati", c, w, h));
                     await Execute(EcfTables.CourseTypes, connection, async (c, w, h) => await ExportCatalog("Unterrichtsarten", c, w, h));
                     await Execute(EcfTables.FormsOfTeaching, connection, async (c, w, h) => await ExportCatalog("Unterrichtsformen", c, w, h));
+                    await Execute(EcfTables.Languages, connection, async (c, w, h) => await ExportCatalog("Muttersprachen", c, w, h));
+                    await Execute(EcfTables.Nationalities, connection, async (c, w, h) => await ExportCatalog("Staatsangehoerigkeiten", c, w, h));
+                    await Execute(EcfTables.Religions, connection, async (c, w, h) => await ExportCatalog("Konfessionen", c, w, h));
                     await Execute(EcfTables.SchoolCategories, connection, async (c, w, h) => await ExportCatalog("Schulformen", c, w, h));
                     await Execute(EcfTables.SchoolClassFlags, connection, async (c, w, h) => await ExportCatalog("KlassenMerkmale", c, w, h));
                     await Execute(EcfTables.SchoolClassLevels, connection, async (c, w, h) => await ExportCatalog("Klassenstufen", c, w, h));
@@ -83,6 +87,7 @@ namespace Ecf.Magellan
 
                     // Special catalogs
                     await Execute(EcfTables.EducationalPrograms, connection, async (c, w, h) => await ExportEducationalPrograms(c, w, h));
+                    await Execute(EcfTables.MaritalStatuses, connection, async (c, w, h) => await ExportMaritalStatuses(w));
                     await Execute(EcfTables.SchoolClassTypes, connection, async (c, w, h) => await ExportSchoolClassTypes(w));
                     await Execute(EcfTables.SubjectCategories, connection, async (c, w, h) => await ExportSubjectCategories(w));
                     await Execute(EcfTables.SubjectTypes, connection, async (c, w, h) => await ExportSubjectTypes(w));
@@ -318,7 +323,7 @@ namespace Ecf.Magellan
                 ecfTableWriter.SetValue(EcfHeaders.Name1, reader["Langname1"]);
                 ecfTableWriter.SetValue(EcfHeaders.Name2, reader["Langname2"]);
                 ecfTableWriter.SetValue(EcfHeaders.SchoolClassTypeId, reader["Klassenart"]);
-                ecfTableWriter.SetValue(EcfHeaders.SchoolClassLevelId, reader["Jahrgang"]);
+                ecfTableWriter.SetValue(EcfHeaders.SchoolClassLevelId, reader["Klassenstufe"]);
                 ecfTableWriter.SetValue(EcfHeaders.DepartmentId, reader["Abteilung"]);
                 ecfTableWriter.SetValue(EcfHeaders.SchoolTypeId, reader["Schulart"]);
                 ecfTableWriter.SetValue(EcfHeaders.SchoolCategoryId, reader["Schulform"]);
@@ -402,7 +407,22 @@ namespace Ecf.Magellan
                     EcfHeaders.Birthname,
                     EcfHeaders.Salutation,
                     EcfHeaders.Gender,
-                    EcfHeaders.Birthdate);
+                    EcfHeaders.Birthdate,
+                    EcfHeaders.Birthname,
+                    EcfHeaders.PlaceOfBirth,
+                    //EcfHeaders.CountryOfBirthId,
+                    EcfHeaders.AddressLines,
+                    EcfHeaders.PostalCode,
+                    EcfHeaders.Locality,
+                    //EcfHeaders.CountryId,
+                    EcfHeaders.HomePhoneNumber,
+                    EcfHeaders.EmailAddress,
+                    EcfHeaders.MobileNumber,
+                    //EcfHeaders.Nationality1Id,
+                    //EcfHeaders.Nationality2Id,
+                    EcfHeaders.NativeLanguageId, 
+                    EcfHeaders.CorrespondenceLanguageId);
+                    //EcfHeaders.ReligionId); 
             }
 
             while (await reader.ReadAsync())
@@ -418,7 +438,22 @@ namespace Ecf.Magellan
                     ecfTableWriter.SetValue(EcfHeaders.Birthname, reader["Geburtsname"]);
                     ecfTableWriter.SetValue(EcfHeaders.Salutation, reader.GetSalutation("Anrede"));
                     ecfTableWriter.SetValue(EcfHeaders.Gender, reader.GetGender("Geschlecht"));
-                    ecfTableWriter.SetValue(EcfHeaders.Birthdate, reader["Geburtsdatum"]);
+                    ecfTableWriter.SetValue(EcfHeaders.Birthdate, reader.GetDate("Geburtsdatum"));
+                    ecfTableWriter.SetValue(EcfHeaders.Birthname, reader["Geburtsname"]);
+                    ecfTableWriter.SetValue(EcfHeaders.PlaceOfBirth, reader["Geburtsort"]);
+                    //ecfTableWriter.SetValue(EcfHeaders.CountryOfBirthId, reader["Geburtsland"]);
+                    ecfTableWriter.SetValue(EcfHeaders.AddressLines, reader["Strasse"]);
+                    ecfTableWriter.SetValue(EcfHeaders.PostalCode, reader["PLZ"]);
+                    ecfTableWriter.SetValue(EcfHeaders.Locality, reader["Ort"]);
+                    //ecfTableWriter.SetValue(EcfHeaders.CountryId, reader["Land"]);
+                    ecfTableWriter.SetValue(EcfHeaders.HomePhoneNumber, reader["Telefon"]);
+                    ecfTableWriter.SetValue(EcfHeaders.EmailAddress, reader["Email"]);
+                    ecfTableWriter.SetValue(EcfHeaders.MobileNumber, reader["Mobil"]);
+                    //ecfTableWriter.SetValue(EcfHeaders.Nationality1Id, reader["Staatsangeh1"]);
+                    //ecfTableWriter.SetValue(EcfHeaders.Nationality2Id, reader["Staatsangeh2"]);
+                    ecfTableWriter.SetValue(EcfHeaders.NativeLanguageId, reader["Muttersprache"]);
+                    ecfTableWriter.SetValue(EcfHeaders.CorrespondenceLanguageId, reader["Verkehrssprache"]);
+                    //ecfTableWriter.SetValue(EcfHeaders.ReligionId, reader["Konfession"]);
 
                     await ecfTableWriter.WriteAsync();
 
@@ -437,19 +472,23 @@ namespace Ecf.Magellan
             if (_version >= 7)
             {
                 sql =
-                    $"select Z.*, K.\"Zugang\", K.\"Abgang\" from \"SchuelerZeitraeume\" as Z " +
+                    $"select Z.*, K.\"Zugang\", K.\"Abgang\" " +
+                    $"from \"SchuelerZeitraeume\" as Z " +
                     $"join \"SchuelerKlassen\" as K " +
-                    $"on Z.\"Mandant\" = K.\"Mandant\" and Z.\"ID\" = K.\"SchuelerZeitraumID\" " +
+                    $"on Z.\"ID\" = K.\"SchuelerZeitraumID\" " +
                     $"join \"Schueler\" as S " +
-                    $"on Z.\"Mandant\" = S.\"Mandant\" and Z.\"Schueler\" = S.\"ID\" " +
+                    $"on Z.\"Schueler\" = S.\"ID\" " +
                     $"where Z.\"Mandant\" = @tenantId and Z.\"Zeitraum\" = @schoolTermId and S.\"Status\" in (2, 3) and (S.\"IDIntern\" is NULL) " +
                     $"union all " +
-                    $"select Z.*, K.\"Zugang\", K.\"Abgang\" from \"SchuelerZeitraeume\" as Z " +
+                    $"select Z.*, K.\"Zugang\", K.\"Abgang\" " +
+                    $"from \"SchuelerZeitraeume\" as Z " +
                     $"join \"SchuelerKlassen\" as K " +
-                    $"on Z.\"Mandant\" = K.\"Mandant\" and Z.\"ID\" = K.\"SchuelerZeitraumID\" " +
+                    $"on Z.\"ID\" = K.\"SchuelerZeitraumID\" " +
                     $"join \"Schueler\" as S " +
-                    $"on Z.\"Mandant\" = S.\"Mandant\" and Z.\"Schueler\" = S.\"IDIntern\" " +
-                    $"where Z.\"Mandant\" = @tenantId and Z.\"Zeitraum\" = @schoolTermId and S.\"Status\" in (2, 3) and not (S.\"IDIntern\" is NULL)";
+                    $"on Z.\"Schueler\" = S.\"IDIntern\" " +
+                    $"join \"Schueler\" as I " +
+                    $"on I.\"ID\" = S.\"IDIntern\" " +
+                    $"where Z.\"Mandant\" = @tenantId and Z.\"Zeitraum\" = @schoolTermId and I.\"Status\" in (2, 3) and not (S.\"IDIntern\" is NULL)";
             }
             else
             {
@@ -491,8 +530,8 @@ namespace Ecf.Magellan
                 ecfTableWriter.SetValue(EcfHeaders.Id, reader["ID"]);
                 ecfTableWriter.SetValue(EcfHeaders.SchoolClassId, reader["Klasse"]);
                 ecfTableWriter.SetValue(EcfHeaders.StudentId, reader["Schueler"]);
-                ecfTableWriter.SetValue(EcfHeaders.EntryDate, reader["Zugang"]);
-                ecfTableWriter.SetValue(EcfHeaders.ExitDate, reader["Abgang"]);
+                ecfTableWriter.SetValue(EcfHeaders.EntryDate, reader.GetDate("Zugang"));
+                ecfTableWriter.SetValue(EcfHeaders.ExitDate, reader.GetDate("Abgang"));
 
                 await ecfTableWriter.WriteAsync();
 
@@ -509,29 +548,31 @@ namespace Ecf.Magellan
             if (_version >= 7)
             {
                 sql =
-                    $"select F.\"ID\", F.\"Klasse\", F.\"Schueler\", F.\"KursNr\", F.\"Unterrichtsart\", F.\"Fachstatus\", F.\"Fach\", " +
+                    $"select F.\"ID\", F.\"Klasse\", S.\"ID\" as \"Schueler\", F.\"KursNr\", F.\"Unterrichtsart\", F.\"Fachstatus\", F.\"Fach\", " +
                     $"F.\"Niveau\", F.\"Schwerpunkt\", K.\"Zugang\", K.\"Abgang\", L.\"ID\" as \"Lehrer\" from \"SchuelerFachdaten\" as F " +
                     $"join \"SchuelerZeitraeume\" as Z " +
-                    $"on Z.\"Mandant\" = F.\"Mandant\" and Z.\"ID\" = F.\"SchuelerZeitraumID\" " +
+                    $"on Z.\"ID\" = F.\"SchuelerZeitraumID\" " +
                     $"join \"SchuelerKlassen\" as K " +
-                    $"on Z.\"Mandant\" = K.\"Mandant\" and Z.\"ID\" = K.\"SchuelerZeitraumID\" " +
+                    $"on Z.\"ID\" = K.\"SchuelerZeitraumID\" " +
                     $"join \"Schueler\" as S " +
-                    $"on Z.\"Mandant\" = S.\"Mandant\" and Z.\"Schueler\" = S.\"ID\" " +
+                    $"on Z.\"Schueler\" = S.\"ID\" " +
                     $"left join \"Lehrer\" as L " +
-                    $"on F.\"Mandant\" = L.\"Mandant\" and F.\"Lehrer\" = L.\"ID\" " +
+                    $"on F.\"Lehrer\" = L.\"ID\" " +
                     $"where Z.\"Mandant\" = @tenantId and Z.\"Zeitraum\" = @schoolTermId and S.\"Status\" in (2, 3) and (S.\"IDIntern\" is NULL) " +
                     $"union all " +
-                    $"select F.\"ID\", F.\"Klasse\", F.\"Schueler\", F.\"KursNr\", F.\"Unterrichtsart\", F.\"Fachstatus\", F.\"Fach\", " +
+                    $"select F.\"ID\", F.\"Klasse\", S.\"IDIntern\" as \"Schueler\", F.\"KursNr\", F.\"Unterrichtsart\", F.\"Fachstatus\", F.\"Fach\", " +
                     $"F.\"Niveau\", F.\"Schwerpunkt\", K.\"Zugang\", K.\"Abgang\", L.\"ID\" as \"Lehrer\" from \"SchuelerFachdaten\" as F " +
                     $"join \"SchuelerZeitraeume\" as Z " +
-                    $"on Z.\"Mandant\" = F.\"Mandant\" and Z.\"ID\" = F.\"SchuelerZeitraumID\" " +
+                    $"on Z.\"ID\" = F.\"SchuelerZeitraumID\" " +
                     $"join \"SchuelerKlassen\" as K " +
-                    $"on Z.\"Mandant\" = K.\"Mandant\" and Z.\"ID\" = K.\"SchuelerZeitraumID\" " +
+                    $"on Z.\"ID\" = K.\"SchuelerZeitraumID\" " +
                     $"join \"Schueler\" as S " +
-                    $"on Z.\"Mandant\" = S.\"Mandant\" and Z.\"Schueler\" = S.\"IDIntern\" " +
+                    $"on Z.\"Schueler\" = S.\"IDIntern\" " +
+                    $"join \"Schueler\" as I " +
+                    $"on I.\"ID\" = S.\"IDIntern\" " +
                     $"left join \"Lehrer\" as L " +
-                    $"on F.\"Mandant\" = L.\"Mandant\" and F.\"Lehrer\" = L.\"ID\" and L.\"Status\" = 1 " +
-                    $"where Z.\"Mandant\" = @tenantId and Z.\"Zeitraum\" = @schoolTermId and S.\"Status\" in (2, 3) and not (S.\"IDIntern\" is NULL)";
+                    $"on F.\"Lehrer\" = L.\"ID\" and L.\"Status\" = 1 " +
+                    $"where Z.\"Mandant\" = @tenantId and Z.\"Zeitraum\" = @schoolTermId and I.\"Status\" in (2, 3) and not (S.\"IDIntern\" is NULL)";
             }
             else
             {
@@ -559,8 +600,6 @@ namespace Ecf.Magellan
 
             var ecfRecordCounter = 0;
 
-            
-
             if (ecfHeaders != null && ecfHeaders.Length > 0)
             {
                 await ecfTableWriter.WriteHeadersAsync(ecfHeaders);
@@ -587,15 +626,15 @@ namespace Ecf.Magellan
                 ecfTableWriter.SetValue(EcfHeaders.Id, reader["ID"]);
                 ecfTableWriter.SetValue(EcfHeaders.SchoolClassId, reader["Klasse"]);
                 ecfTableWriter.SetValue(EcfHeaders.StudentId, reader["Schueler"]);
-                ecfTableWriter.SetValue(EcfHeaders.CourseNo, reader["KursNr"]);
+                ecfTableWriter.SetValue(EcfHeaders.CourseNo, reader.GetShortOrDefault("KursNr", 0));
                 ecfTableWriter.SetValue(EcfHeaders.CourseTypeId, reader["Unterrichtsart"]);
                 ecfTableWriter.SetValue(EcfHeaders.CourseCategoryId, reader["Fachstatus"]);
                 ecfTableWriter.SetValue(EcfHeaders.SubjectId, reader["Fach"]);
                 ecfTableWriter.SetValue(EcfHeaders.SubjectLevelId, reader["Niveau"]);
                 ecfTableWriter.SetValue(EcfHeaders.SubjectFocusId, reader["Schwerpunkt"]);
                 ecfTableWriter.SetValue(EcfHeaders.TeacherId, reader["Lehrer"]);
-                ecfTableWriter.SetValue(EcfHeaders.EntryDate, reader["Zugang"]);
-                ecfTableWriter.SetValue(EcfHeaders.ExitDate, reader["Abgang"]);
+                ecfTableWriter.SetValue(EcfHeaders.EntryDate, reader.GetDate("Zugang"));
+                ecfTableWriter.SetValue(EcfHeaders.ExitDate, reader.GetDate("Abgang"));
 
                 await ecfTableWriter.WriteAsync();
 
@@ -672,6 +711,24 @@ namespace Ecf.Magellan
             return ecfRecordCounter;
         }
 
+        private async Task<int> ExportMaritalStatuses(EcfTableWriter ecfTableWriter)
+        {
+            await ecfTableWriter.WriteHeadersAsync(
+                EcfHeaders.Id,
+                EcfHeaders.Code,
+                EcfHeaders.StatisticalCode,
+                EcfHeaders.InternalCode,
+                EcfHeaders.Name);
+
+            await ecfTableWriter.WriteAsync("0", "VH", "00", "00", "Verheiratet");
+            await ecfTableWriter.WriteAsync("1", "NV", "01", "01", "Nicht Verheiratet");
+            await ecfTableWriter.WriteAsync("2", "LE", "02", "02", "Ledig");
+            await ecfTableWriter.WriteAsync("3", "GE", "03", "03", "Geschieden");
+            await ecfTableWriter.WriteAsync("4", "VW", "04", "04", "Verwitwet");
+
+            return await Task.FromResult(5);
+        }
+
         private async Task<int> ExportSubjectTypes(EcfTableWriter ecfTableWriter)
         {
             await ecfTableWriter.WriteHeadersAsync(
@@ -735,15 +792,30 @@ namespace Ecf.Magellan
             else
             {
                 await ecfTableWriter.WriteHeadersAsync(
-                EcfHeaders.Id,
-                EcfHeaders.Code,
-                EcfHeaders.LastName,
-                EcfHeaders.FirstName,
-                EcfHeaders.MiddleName,
-                EcfHeaders.Birthname,
-                EcfHeaders.Salutation,
-                EcfHeaders.Gender,
-                EcfHeaders.Birthdate);
+                    EcfHeaders.Id,
+                    EcfHeaders.Code,
+                    EcfHeaders.LastName,
+                    EcfHeaders.FirstName,
+                    EcfHeaders.MiddleName,
+                    EcfHeaders.Salutation,
+                    EcfHeaders.Gender,
+                    EcfHeaders.Birthdate,
+                    EcfHeaders.Birthname,
+                    EcfHeaders.PlaceOfBirth,
+                    EcfHeaders.MaritalStatusId,
+                    EcfHeaders.AddressLines,
+                    EcfHeaders.PostalCode,
+                    EcfHeaders.Locality,
+                    //EcfHeaders.CountryId,
+                    EcfHeaders.HomePhoneNumber,
+                    EcfHeaders.OfficePhoneNumber,
+                    EcfHeaders.EmailAddress,
+                    EcfHeaders.MobileNumber,
+                    //EcfHeaders.Nationality1Id,
+                    //EcfHeaders.Nationality2Id,
+                    EcfHeaders.NativeLanguageId,
+                    EcfHeaders.CorrespondenceLanguageId);
+                    //EcfHeaders.ReligionId); 
             }
 
             while (await reader.ReadAsync())
@@ -753,10 +825,25 @@ namespace Ecf.Magellan
                 ecfTableWriter.SetValue(EcfHeaders.LastName, reader["Nachname"]);
                 ecfTableWriter.SetValue(EcfHeaders.FirstName, reader["Vorname"]);
                 ecfTableWriter.SetValue(EcfHeaders.MiddleName, reader["Vorname2"]);
-                ecfTableWriter.SetValue(EcfHeaders.Birthname, reader["Geburtsname"]);
                 ecfTableWriter.SetValue(EcfHeaders.Salutation, reader.GetSalutation("Anrede"));
                 ecfTableWriter.SetValue(EcfHeaders.Gender, reader.GetGender("Geschlecht"));
-                ecfTableWriter.SetValue(EcfHeaders.Birthdate, reader["Geburtsdatum"]);
+                ecfTableWriter.SetValue(EcfHeaders.Birthdate, reader.GetDate("Geburtsdatum"));
+                ecfTableWriter.SetValue(EcfHeaders.Birthname, reader["Geburtsname"]);
+                ecfTableWriter.SetValue(EcfHeaders.PlaceOfBirth, reader["Geburtsort"]);
+                ecfTableWriter.SetValue(EcfHeaders.MaritalStatusId, reader["Ehestand"]);
+                ecfTableWriter.SetValue(EcfHeaders.AddressLines, reader["Strasse"]);
+                ecfTableWriter.SetValue(EcfHeaders.PostalCode, reader["PLZ"]);
+                ecfTableWriter.SetValue(EcfHeaders.Locality, reader["Ort"]);
+                //ecfTableWriter.SetValue(EcfHeaders.CountryId, reader["Land"]);
+                ecfTableWriter.SetValue(EcfHeaders.HomePhoneNumber, reader["Telefon"]);
+                ecfTableWriter.SetValue(EcfHeaders.OfficePhoneNumber, reader["TelefonDienst"]);
+                ecfTableWriter.SetValue(EcfHeaders.EmailAddress, reader["Email"]);
+                ecfTableWriter.SetValue(EcfHeaders.MobileNumber, reader["Mobil"]);
+                //ecfTableWriter.SetValue(EcfHeaders.Nationality1Id, reader["Staatsangeh"]);
+                //ecfTableWriter.SetValue(EcfHeaders.Nationality2Id, reader["Staatsangeh2"]);
+                ecfTableWriter.SetValue(EcfHeaders.NativeLanguageId, reader["Muttersprache"]);
+                ecfTableWriter.SetValue(EcfHeaders.CorrespondenceLanguageId, reader["Verkehrssprache"]);
+                //ecfTableWriter.SetValue(EcfHeaders.ReligionId, reader["Konfession"]);
 
                 await ecfTableWriter.WriteAsync();
 

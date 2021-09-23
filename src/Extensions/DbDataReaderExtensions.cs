@@ -30,6 +30,19 @@ namespace Ecf.Magellan
     /// </summary>
     public static class DbDataReaderExtensions
     {
+        public static Date? GetDate(this DbDataReader dbDataReader, string name)
+        {
+            var value = dbDataReader[name];
+            if (value != null)
+            {
+                if (value.GetType() == typeof(DateTime))
+                {
+                    return new Date((DateTime)value);
+                }
+            }
+            return null;
+        }
+
         public static EcfGender? GetGender(this DbDataReader dbDataReader, string name)
         {
             var value = dbDataReader[name];
@@ -75,6 +88,19 @@ namespace Ecf.Magellan
             return null;
         }
 
+        public static short GetShortOrDefault(this DbDataReader dbDataReader, string name, short defaultValue)
+        {
+            var value = dbDataReader[name];
+            if (value != null) 
+            {
+                if (value.GetType() == typeof(short))
+                {
+                    return (short)value;
+                }
+            }
+            return defaultValue;
+        }
+        
         public static bool HasColumn(this DbDataReader dbDataReader, string columnName)
         {
             for (var i = 0; i < dbDataReader.FieldCount; i++)

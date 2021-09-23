@@ -80,12 +80,14 @@ namespace Ecf.Magellan
             var sql =
                 "INSERT INTO \"Sorgeberechtigte\" " +
                 "(" +
-                "  \"Mandant\", \"GUIDExtern\", \"Nachname\", \"Vorname\", " +
-                "  \"Strasse\", \"PLZ\", \"Ort\", \"Email\", \"TelefonPrivat\" " +                
+                "  \"Mandant\", \"GUIDExtern\", \"Nachname\", \"Vorname\", \"Anrede\", " +
+                "  \"Strasse\", \"Land\", \"PLZ\", \"Ort\", \"Email\", \"TelefonPrivat\", \"TelefonBeruf\", " +                
+                "  \"Status2\" " +
                 ") " +
                 "VALUES ( " +
-                "  @TenantId, @GUIDExtern, @LastName, @FirstName, " +
-                "  @AddressLines, @PostalCode, @Locality, @Email, @HomePhoneNumber " +
+                "  @TenantId, @GUIDExtern, @LastName, @FirstName, @Salutation, " +
+                "  @AddressLines, @Country, @PostalCode, @Locality, @Email, @HomePhoneNumber, @OfficePhoneNumber, " +
+                "  @Status2 " +
                 ")";
             
 
@@ -97,12 +99,19 @@ namespace Ecf.Magellan
                 Helper.SetParamValue(fbCommand, "@TenantId", FbDbType.Integer, tenantId);
                 Helper.SetParamValue(fbCommand, "@GUIDExtern", FbDbType.VarChar, guidExtern);                
                 Helper.SetParamValue(fbCommand, "@LastName", FbDbType.VarChar, ecfTableReader.GetValue<string>("LastName"));
-                Helper.SetParamValue(fbCommand, "@FirstName", FbDbType.VarChar, ecfTableReader.GetValue<string>("FirstName"));                               
+                Helper.SetParamValue(fbCommand, "@FirstName", FbDbType.VarChar, ecfTableReader.GetValue<string>("FirstName"));
+                Helper.SetParamValue(fbCommand, "@Salutation", FbDbType.VarChar, ValueConvert.Salutation(ecfTableReader.GetValue<string>("Salutation")));
                 Helper.SetParamValue(fbCommand, "@AddressLines", FbDbType.VarChar, ecfTableReader.GetValue<string>("AddressLines"));
+                Helper.SetParamValue(fbCommand, "@Country", FbDbType.VarChar, ecfTableReader.GetValue<string>("CountryId"));
                 Helper.SetParamValue(fbCommand, "@PostalCode", FbDbType.VarChar, ecfTableReader.GetValue<string>("PostalCode"));
                 Helper.SetParamValue(fbCommand, "@Locality", FbDbType.VarChar, ecfTableReader.GetValue<string>("Locality"));
                 Helper.SetParamValue(fbCommand, "@Email", FbDbType.VarChar, ecfTableReader.GetValue<string>("Email"));
                 Helper.SetParamValue(fbCommand, "@HomePhoneNumber", FbDbType.VarChar, ecfTableReader.GetValue<string>("HomePhoneNumber"));
+                Helper.SetParamValue(fbCommand, "@OfficePhoneNumber", FbDbType.VarChar, ecfTableReader.GetValue<string>("OfficePhoneNumber"));
+                Helper.SetParamValue(fbCommand, "@Status2", FbDbType.SmallInt, StatusType.Active);
+
+
+                // Status
 
                 success = await fbCommand.ExecuteNonQueryAsync();
                 await fbTransaction.CommitAsync();
@@ -162,12 +171,12 @@ namespace Ecf.Magellan
             var sql =
                 "INSERT INTO \"Klassen\" " +
                 "(" +
-                "  \"Mandant\", \"Kuerzel\", \"Langname1\", \"GUIDExtern\", " +
-                "  \"Klassenart\", \"Notenart\" " +
+                "  \"Mandant\", \"Kuerzel\", \"KuerzelStatistik\", \"Langname1\", \"Langname2\", " +
+                "  \"GUIDExtern\", \"Schulform\", \"Klassenart\", \"Notenart\" " +
                 ") " +
                 "VALUES ( " +
-                "  @TenantId, @Code, @Name, @GUIDExtern, " +
-                "  @SchoolClassTypeId, @GradeSystemId" +
+                "  @TenantId, @Code, @StatisticalCode, @Name1, @Name2, " +
+                "  @GUIDExtern, @SchoolCategoryId, @SchoolClassTypeId, @GradeSystemId" +
                 ") RETURNING ID";
 
             using var fbTransaction = fbConnection.BeginTransaction();
@@ -177,13 +186,16 @@ namespace Ecf.Magellan
 
                 Helper.SetParamValue(fbCommand, "@TenantId", FbDbType.BigInt, tenantId);
                 Helper.SetParamValue(fbCommand, "@Code", FbDbType.VarChar, ecfTableReader.GetValue<string>("Code"));
-                Helper.SetParamValue(fbCommand, "@Name", FbDbType.VarChar, ecfTableReader.GetValue<string>("Name"));
+                Helper.SetParamValue(fbCommand, "@StatisticalCode", FbDbType.VarChar, ecfTableReader.GetValue<string>("StatisticalCode"));
+                Helper.SetParamValue(fbCommand, "@Name1", FbDbType.VarChar, ecfTableReader.GetValue<string>("Name1"));
+                Helper.SetParamValue(fbCommand, "@Name2", FbDbType.VarChar, ecfTableReader.GetValue<string>("Name2"));
                 Helper.SetParamValue(fbCommand, "@GUIDExtern", FbDbType.Guid, guidExtern);
+                Helper.SetParamValue(fbCommand, "@SchoolCategoryId", FbDbType.VarChar, ecfTableReader.GetValue<string>("SchoolCategoryId"));
                 Helper.SetParamValue(fbCommand, "@SchoolClassTypeId", FbDbType.SmallInt, ecfTableReader.GetValue<string>("SchoolClassTypeId"));
                 Helper.SetParamValue(fbCommand, "@GradeSystemId", FbDbType.SmallInt, ValueConvert.GradeSystem(ecfTableReader.GetValue<string>("GradeSystemId")));
                 FbParameter IdParam = fbCommand.Parameters.Add("@ClassId", FbDbType.Integer, Int32.MaxValue, "ID");
                 IdParam.Direction = ParameterDirection.Output;
-                
+
                 id = (int)await fbCommand.ExecuteScalarAsync();                
                 await fbTransaction.CommitAsync();
 
@@ -197,7 +209,8 @@ namespace Ecf.Magellan
             }            
         }
 
-        public static async Task<bool> SchoolClassTerm(FbConnection fbConnection, int tenantId, int classId, int termId, string classTermId)
+        public static async Task<bool> SchoolClassTerm(FbConnection fbConnection, int tenantId, int classId, int termId, string classTermId,
+            EcfTableReader ecfTableReader)
         {
             Guid guidExtern = GuidFactory.Create(GuidFactory.DnsNamespace, classTermId);
 
@@ -205,10 +218,11 @@ namespace Ecf.Magellan
             var sql =
                 "INSERT INTO \"KlassenZeitraeume\" " +
                 "(" +
-                "  \"Mandant\", \"Klasse\", \"Zeitraum\", \"GUIDExtern\" " +
+                "  \"Mandant\", \"Klasse\", \"Zeitraum\", \"GUIDExtern\", " +
+                "  \"Jahrgang\" " +
                 ") " +
                 "VALUES ( " +
-                "  @TenantId, @ClassId, @TermId, @GUIDExtern " +                
+                "  @TenantId, @ClassId, @TermId, @GUIDExtern, @SchoolClassYear " +                
                 ")";
 
             using var fbTransaction = fbConnection.BeginTransaction();
@@ -220,6 +234,7 @@ namespace Ecf.Magellan
                 Helper.SetParamValue(fbCommand, "@ClassId",  FbDbType.BigInt, classId);
                 Helper.SetParamValue(fbCommand, "@TermId",   FbDbType.BigInt, termId);
                 Helper.SetParamValue(fbCommand, "@GUIDExtern", FbDbType.Guid, guidExtern);
+                Helper.SetParamValue(fbCommand, "@SchoolClassYear", FbDbType.SmallInt, ecfTableReader.GetValue<string>("SchoolClassYear"));                
 
                 success = await fbCommand.ExecuteNonQueryAsync();
                 await fbTransaction.CommitAsync();
@@ -333,11 +348,15 @@ namespace Ecf.Magellan
                 "INSERT INTO \"Schueler\" " +
                 "(" +
                 "  \"Mandant\", \"GUIDExtern\", \"Status\", \"Anrede\", \"Nachname\", \"Vorname\", \"Geschlecht\", " +
-                "  \"Geburtsdatum\", \"Strasse\", \"PLZ\", \"Ort\", \"EMail\", \"Telefon\", \"Staatsangeh1\", \"Staatsangeh2\" " +                
+                "  \"Geburtsdatum\", \"Strasse\", \"PLZ\", \"Ort\", \"Gemeinde\", \"EMail\", \"Telefon\", \"Mobil\", " +
+                "  \"Staatsangeh1\", \"Staatsangeh2\", \"Verkehrssprache\", \"Konfession\", \"Krankenkasse\", \"ZugangAm\", " +
+                "  \"Grundschuleintritt\" " +
                 ") " +
                 "VALUES ( " +
                 "  @TenantId, @GUIDExtern, @Status, @Salutation, @LastName, @FirstName, @Gender, " +
-                "  @Birthdate, @AddressLines, @PostalCode, @Locality, @Email, @HomePhoneNumber, @Nationality1, @Nationality2 " +
+                "  @Birthdate, @AddressLines, @PostalCode, @Locality, @Region, @Email, @HomePhoneNumber, @MobileNumber, " +
+                "  @Nationality1, @Nationality2, @NativeLanguage, @Religion, @HealthInsuranceProvider, @EntryDate, " +
+                "  @FirstEntryDate " +
                 ") RETURNING ID";
             
 
@@ -356,11 +375,18 @@ namespace Ecf.Magellan
                 Helper.SetParamValue(fbCommand, "@Birthdate", FbDbType.Date, ecfTableReader.GetValue<string>("Birthdate"));
                 Helper.SetParamValue(fbCommand, "@AddressLines", FbDbType.VarChar, ecfTableReader.GetValue<string>("AddressLines"));
                 Helper.SetParamValue(fbCommand, "@PostalCode", FbDbType.VarChar, ecfTableReader.GetValue<string>("PostalCode"));
-                Helper.SetParamValue(fbCommand, "@Locality", FbDbType.VarChar, ecfTableReader.GetValue<string>("Locality"));                
+                Helper.SetParamValue(fbCommand, "@Locality", FbDbType.VarChar, ecfTableReader.GetValue<string>("Locality"));
+                Helper.SetParamValue(fbCommand, "@Region", FbDbType.VarChar, ecfTableReader.GetValue<string>("RegionId"));
                 Helper.SetParamValue(fbCommand, "@Email", FbDbType.VarChar, ecfTableReader.GetValue<string>("Email"));
                 Helper.SetParamValue(fbCommand, "@HomePhoneNumber", FbDbType.VarChar, ecfTableReader.GetValue<string>("HomePhoneNumber"));
-                Helper.SetParamValue(fbCommand, "@Nationality1", FbDbType.VarChar, ecfTableReader.GetValue<string>("Nationality1"));
-                Helper.SetParamValue(fbCommand, "@Nationality2", FbDbType.VarChar, ecfTableReader.GetValue<string>("Nationality2"));
+                Helper.SetParamValue(fbCommand, "@MobileNumber", FbDbType.VarChar, ecfTableReader.GetValue<string>("MobileNumber"));
+                Helper.SetParamValue(fbCommand, "@Nationality1", FbDbType.VarChar, ecfTableReader.GetValue<string>("Nationality1Id"));
+                Helper.SetParamValue(fbCommand, "@Nationality2", FbDbType.VarChar, ecfTableReader.GetValue<string>("Nationality2Id"));
+                Helper.SetParamValue(fbCommand, "@NativeLanguage", FbDbType.VarChar, ecfTableReader.GetValue<string>("NativeLanguage"));
+                Helper.SetParamValue(fbCommand, "@Religion", FbDbType.VarChar, ecfTableReader.GetValue<string>("ReligionId"));
+                Helper.SetParamValue(fbCommand, "@HealthInsuranceProvider", FbDbType.VarChar, ecfTableReader.GetValue<string>("HealthInsuranceProvider"));
+                Helper.SetParamValue(fbCommand, "@EntryDate", FbDbType.Date, ecfTableReader.GetValue<string>("EntryDate"));
+                Helper.SetParamValue(fbCommand, "@FirstEntryDate", FbDbType.Date, ecfTableReader.GetValue<string>("FirstEntryDate"));
 
                 FbParameter IdParam = fbCommand.Parameters.Add("@Id", FbDbType.Integer, Int32.MaxValue, "ID");
                 IdParam.Direction = ParameterDirection.Output;
@@ -384,10 +410,11 @@ namespace Ecf.Magellan
             var sql =
                 "INSERT INTO \"SchuelerSorgebe\" " +
                 "(" +
-                "  \"Mandant\", \"Schueler\", \"Sorgebe\", \"Verhaeltnis\" " +                
+                "  \"Mandant\", \"Schueler\", \"Sorgebe\", \"Verhaeltnis\", " +                
+                "  \"Benachrichtigung\", \"TelefonPrioritaet\", \"Position\" " +
                 "  )" +
                 "VALUES ( " +
-                "  @TenantId, @StudentId, @CustodianId, @RelationshipType " +                
+                "  @TenantId, @StudentId, @CustodianId, @RelationshipType, @CustodianNotification, @ContactPriority, @Order " +                
                 ")";
 
             using var fbTransaction = fbConnection.BeginTransaction();
@@ -399,14 +426,17 @@ namespace Ecf.Magellan
                 Helper.SetParamValue(fbCommand, "@StudentId", FbDbType.BigInt, studentId);
                 Helper.SetParamValue(fbCommand, "@CustodianId", FbDbType.BigInt, custodianId);
                 Helper.SetParamValue(fbCommand, "@RelationshipType", FbDbType.SmallInt, ValueConvert.RelationShip(ecfTableReader.GetValue<string>("RelationshipType")));
-                
+                Helper.SetParamValue(fbCommand, "@CustodianNotification", FbDbType.SmallInt, ValueConvert.Notification(ecfTableReader.GetValue<string>("CustodianNotification")));
+                Helper.SetParamValue(fbCommand, "@ContactPriority", FbDbType.SmallInt, ValueConvert.Priority(ecfTableReader.GetValue<string>("ContactPriority")));
+                Helper.SetParamValue(fbCommand, "@Order", FbDbType.SmallInt, ecfTableReader.GetValue<string>("Order"));
+
                 success = await fbCommand.ExecuteNonQueryAsync();
                 await fbTransaction.CommitAsync();
             }
             catch (Exception e)
             {
                 fbTransaction.Rollback();
-                Console.WriteLine($"[INSERT ERROR] [ScuelerSorgebe] {e.Message}");
+                Console.WriteLine($"[INSERT ERROR] [SchuelerSorgebe] {e.Message}");
             }
 
             return success > 0;
